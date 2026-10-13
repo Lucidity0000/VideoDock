@@ -1,0 +1,61 @@
+[
+  {
+    "id": "llama-cuda",
+    "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11457/llama-b11457-bin-win-cuda-13.4-x64.zip",
+    "size": 153137838,
+    "sha256": "0a640310af7490dd31c34e50fe8cebfaa3fc354cf55f683796f220bc21906892",
+    "filename": "llama-cuda.zip"
+  },
+  {
+    "id": "llama-cudart",
+    "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11457/cudart-llama-bin-win-cuda-13.4-x64.zip",
+    "size": 423535356,
+    "sha256": "738f8c251ac22b70c3ae6f83a10cf222725df0395246a2cf58f32bdb85fbe668",
+    "files": [
+      {
+        "name": "cudart64_13.dll",
+        "size": 551024,
+        "sha256": "05bfafcb97bd53b0089568a96e1e5bd6921637bd0853ff7f5342bd31a6a16890"
+      },
+      {
+        "name": "cublas64_13.dll",
+        "size": 54942320,
+        "sha256": "1119dbca0a808e0c8850bb4221e330daf0b5ddb348d62d37b6ac533854723df9"
+      },
+      {
+        "name": "cublasLt64_13.dll",
+        "size": 492752496,
+        "sha256": "0f5bc315fef706b5626248ebd74e8a48a9e82fa2f0cad38330f5f70984913107"
+      }
+    ],
+    "filename": "llama-cudart.zip"
+  },
+  {
+    "id": "transcribe-cuda",
+    "filename": "transcribe_cpp_native_cu12-0.3.1-py3-none-win_amd64.whl",
+    "url": "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.3.1/transcribe_cpp_native_cu12-0.3.1-py3-none-win_amd64.whl",
+    "size": 200943028,
+    "sha256": "beda0455e5ad2093debf29a6afaeb8a164d58bff5358db84a14c3cbe95b9247a"
+  },
+  {
+    "id": "cuda12-cublas",
+    "filename": "nvidia_cublas_cu12-12.9.2.10-py3-none-win_amd64.whl",
+    "url": "https://files.pythonhosted.org/packages/20/e2/fc9a0e985249d873150276d5afb02e39a66817fedbf1a385724393e505ed/nvidia_cublas_cu12-12.9.2.10-py3-none-win_amd64.whl",
+    "size": 553162896,
+    "sha256": "623f43027d40d44ceadf0043f002bd25cf353e8f13ce90b9a87057019f560661"
+  },
+  {
+    "id": "cuda12-runtime",
+    "filename": "nvidia_cuda_runtime_cu12-12.9.79-py3-none-win_amd64.whl",
+    "url": "https://files.pythonhosted.org/packages/59/df/e7c3a360be4f7b93cee39271b792669baeb3846c58a4df6dfcf187a7ffab/nvidia_cuda_runtime_cu12-12.9.79-py3-none-win_amd64.whl",
+    "size": 3591604,
+    "sha256": "8e018af8fa02363876860388bd10ccb89eb9ab8fb0aa749aaf58430a9f7c4891"
+  },
+  {
+    "id": "cuda12-nvrtc",
+    "filename": "nvidia_cuda_nvrtc_cu12-12.9.86-py3-none-win_amd64.whl",
+    "size": 76408187,
+    "sha256": "72972ebdcf504d69462d3bcd67e7b81edd25d0fb85a2c46d3ea3517666636349",
+    "url": "https://files.pythonhosted.org/packages/52/de/823919be3b9d0ccbf1f784035423c5f18f4267fb0123558d58b813c6ec86/nvidia_cuda_nvrtc_cu12-12.9.86-py3-none-win_amd64.whl"
+  }
+]

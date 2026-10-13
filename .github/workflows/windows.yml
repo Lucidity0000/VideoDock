@@ -1,0 +1,51 @@
+name: Windows checks and optional build
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      build_binaries:
+        description: "Build Windows binaries for internal validation (no public release)"
+        required: false
+        default: false
+        type: boolean
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python tools/fetch_dependencies.py
+      - run: python -m ruff check .
+      - name: Run isolated tests
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .test-artifacts/ci | Out-Null
+          python -m pytest -q --basetemp=".test-artifacts/ci/pytest-${{ github.run_id }}-${{ github.run_attempt }}" -o cache_dir=.cache/ui-refresh
+        env:
+          QT_QPA_PLATFORM: offscreen
+  build:
+    if: github.event_name == 'workflow_dispatch' && inputs.build_binaries
+    needs: checks
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Prepare dedicated inference environment
+        run: python tools/setup_inference.py
+      - run: .\packaging\build.ps1 -Python python
+      - run: python tools/smoke_packaged.py
+      # Complete DISTRIBUTION.md before uploading bundled binaries anywhere.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: VideoDock-validation-reports
+          path: .test-artifacts/releases/*/packaged/report.json
+

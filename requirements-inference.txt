@@ -1,0 +1,10 @@
+# Dedicated environment: keep Torch/CUDA separate from CTranslate2 and Qt.
+transformers==5.19.0
+accelerate==1.15.0
+numpy==2.2.6
+librosa==0.11.0
+psutil>=7,<8
+pyinstaller==6.22.3
+transcribe-cpp==0.3.1
+nagisa==0.3.0
+soynlp==0.0.493

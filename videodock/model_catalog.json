@@ -1,0 +1,1154 @@
+[
+  {
+    "id": "base",
+    "title": "Whisper Base",
+    "repository": "Systran/faster-whisper-base",
+    "revision": "ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66",
+    "languages": "Multilingual",
+    "license": "MIT",
+    "guidance": "Lightweight CPU preset",
+    "measured_guidance": "VideoDock hardware measurements pending; see README for upstream benchmarks.",
+    "files": [
+      {
+        "name": "config.json",
+        "size": 2309,
+        "sha256": "56a6d8110d311f19c8f0471e562832c7527f146b567275bfca59fcf7c184da9a"
+      },
+      {
+        "name": "model.bin",
+        "size": 145217532,
+        "sha256": "d01c3014881c9c6f3133c182f3d2887eb6ca1c789a7538c5c007196857a0a6a9"
+      },
+      {
+        "name": "tokenizer.json",
+        "size": 2203239,
+        "sha256": "fb7b63191e9bb045082c79fd742a3106a12c99513ab30df4a0d47fa6cb6fd0ab"
+      },
+      {
+        "name": "vocabulary.txt",
+        "size": 459861,
+        "sha256": "34ce3fe1c5041027b3f8d42912270993f986dbc4bb34cf27f951e34a1e453913"
+      }
+    ],
+    "bytes": 147882941,
+    "task": "speech"
+  },
+  {
+    "id": "small",
+    "title": "Whisper Small",
+    "repository": "Systran/faster-whisper-small",
+    "revision": "536b0662742c02347bc0e980a01041f333bce120",
+    "languages": "Multilingual",
+    "license": "MIT",
+    "guidance": "Recommended CPU preset",
+    "measured_guidance": "VideoDock hardware measurements pending; see README for upstream benchmarks.",
+    "files": [
+      {
+        "name": "config.json",
+        "size": 2370,
+        "sha256": "b55496ac7940a7ae47d2c01eab40edfd8701feec1229d9cce3b40014383fb828"
+      },
+      {
+        "name": "model.bin",
+        "size": 483546902,
+        "sha256": "3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671"
+      },
+      {
+        "name": "tokenizer.json",
+        "size": 2203239,
+        "sha256": "fb7b63191e9bb045082c79fd742a3106a12c99513ab30df4a0d47fa6cb6fd0ab"
+      },
+      {
+        "name": "vocabulary.txt",
+        "size": 459861,
+        "sha256": "34ce3fe1c5041027b3f8d42912270993f986dbc4bb34cf27f951e34a1e453913"
+      }
+    ],
+    "bytes": 486212372,
+    "task": "speech"
+  },
+  {
+    "id": "turbo",
+    "title": "Whisper Large v3 Turbo",
+    "repository": "dropbox-dash/faster-whisper-large-v3-turbo",
+    "revision": "0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf",
+    "languages": "Multilingual",
+    "license": "MIT",
+    "guidance": "Recommended compatible-GPU preset",
+    "measured_guidance": "VideoDock hardware measurements pending; see README for upstream benchmarks.",
+    "files": [
+      {
+        "name": "config.json",
+        "size": 2263,
+        "sha256": "b0253ea6c0d3bea6b1e19e91a02acfd3b53f4467362efcb5a3e6b16c9b3a9b7e"
+      },
+      {
+        "name": "model.bin",
+        "size": 1617884929,
+        "sha256": "e76620f83d5f5b69efd3d87e3dc180c1bd21df9fbebacfd4335e5e1efcc018da"
+      },
+      {
+        "name": "preprocessor_config.json",
+        "size": 340,
+        "sha256": "7ccc62c6f2765af1f3b46c00c9b5894426835a05021c8b9c01eecb6dfb542711"
+      },
+      {
+        "name": "tokenizer.json",
+        "size": 2710337,
+        "sha256": "297b13372ac43916285644fb9687add3cc62ee2a1adb60da3dc25cc94c1871fd"
+      },
+      {
+        "name": "vocabulary.json",
+        "size": 1068114,
+        "sha256": "c69260f2ab26d659b7c398f9a2b2b48ed0df16c3b47d7326782fd9cba71690c1"
+      }
+    ],
+    "bytes": 1621665983,
+    "task": "speech"
+  },
+  {
+    "id": "large-v3",
+    "title": "Whisper Large v3",
+    "repository": "Systran/faster-whisper-large-v3",
+    "revision": "edaa852ec7e145841d8ffdb056a99866b5f0a478",
+    "languages": "Multilingual",
+    "license": "MIT",
+    "guidance": "Quality preset; high memory use",
+    "measured_guidance": "VideoDock hardware measurements pending; see README for upstream benchmarks.",
+    "files": [
+      {
+        "name": "config.json",
+        "size": 2394,
+        "sha256": "a9306624f5ec14270a014b647e5c316b6e03a662c369758d1b90697a7b0655b9"
+      },
+      {
+        "name": "model.bin",
+        "size": 3087284237,
+        "sha256": "69f74147e3334731bc3a76048724833325d2ec74642fb52620eda87352e3d4f1"
+      },
+      {
+        "name": "preprocessor_config.json",
+        "size": 340,
+        "sha256": "7ccc62c6f2765af1f3b46c00c9b5894426835a05021c8b9c01eecb6dfb542711"
+      },
+      {
+        "name": "tokenizer.json",
+        "size": 2480617,
+        "sha256": "6d8cbd7cd0d8d5815e478dac67b85a26bbe77c1f5e0c6d76d1ce2abc0e5f21ca"
+      },
+      {
+        "name": "vocabulary.json",
+        "size": 1068114,
+        "sha256": "c69260f2ab26d659b7c398f9a2b2b48ed0df16c3b47d7326782fd9cba71690c1"
+      }
+    ],
+    "bytes": 3090835702,
+    "task": "speech"
+  },
+  {
+    "id": "distil-v3.5",
+    "title": "Distil-Whisper Large v3.5",
+    "repository": "distil-whisper/distil-large-v3.5-ct2",
+    "revision": "9793ccc07920e0f830e1dba0343efcdf0ef8c903",
+    "languages": "English only",
+    "license": "MIT",
+    "guidance": "English preset; high memory use",
+    "measured_guidance": "VideoDock hardware measurements pending; see README for upstream benchmarks.",
+    "files": [
+      {
+        "name": "config.json",
+        "size": 2690,
+        "sha256": "90c55f775cc4e0bb17293d0bf12f96557a486f20dea886fabd8e6075a3588b21"
+      },
+      {
+        "name": "model.bin",
+        "size": 1512927867,
+        "sha256": "c58b88b8585ffcd2135fddaaf421ce72cb223b32edea70d156aed1dea319a119"
+      },
+      {
+        "name": "preprocessor_config.json",
+        "size": 340,
+        "sha256": "7ccc62c6f2765af1f3b46c00c9b5894426835a05021c8b9c01eecb6dfb542711"
+      },
+      {
+        "name": "tokenizer.json",
+        "size": 2480645,
+        "sha256": "b3c8202bbf06d8ee4232c5984baa563784ac4737e2e7fdc42fa180200d3cfcdb"
+      },
+      {
+        "name": "vocabulary.json",
+        "size": 1068114,
+        "sha256": "c69260f2ab26d659b7c398f9a2b2b48ed0df16c3b47d7326782fd9cba71690c1"
+      }
+    ],
+    "bytes": 1516479656,
+    "task": "speech"
+  },
+  {
+    "id": "m2m100-418m",
+    "title": "M2M100 418M",
+    "task": "translation",
+    "repository": "ishiki-emo/mojicast-m2m100-ct2",
+    "revision": "0ea75b31e8fe07a27ba6c2b9b1b1a279e7f44b93",
+    "languages": "100 languages · many-to-many",
+    "license": "MIT",
+    "guidance": "CPU INT8 or NVIDIA GPU; generic Chinese + OpenCC script conversion",
+    "measured_guidance": "Representative translation quality review pending; review exported text.",
+    "files": [
+      {
+        "name": "LICENSE",
+        "size": 1327,
+        "sha256": "ada5df3ae735d106ee47da32d705a9b35d7140c4ce8de2b1912c7c5598ecf7d3"
+      },
+      {
+        "name": "config.json",
+        "size": 233,
+        "sha256": "72901fbd8abd89fb5cf4a388f26fc681f5c4c58a1e1a88b30b879f107270e7ee"
+      },
+      {
+        "name": "model.bin",
+        "size": 490667752,
+        "sha256": "a1826980fc5c037e69c7ac94fcb56c03001a66f380eb71863cc0a3879e71421b"
+      },
+      {
+        "name": "sentencepiece.model",
+        "size": 2423393,
+        "sha256": "d8f7c76ed2a5e0822be39f0a4f95a55eb19c78f4593ce609e2edbc2aea4d380a"
+      },
+      {
+        "name": "shared_vocabulary.json",
+        "size": 2924622,
+        "sha256": "18916ac68f9ac8fbd5250ca603dcb3861aac8672924d93a8dadc82eb3147f941"
+      }
+    ],
+    "bytes": 496017327,
+    "supported_sources": [
+      "af",
+      "am",
+      "ar",
+      "ast",
+      "az",
+      "ba",
+      "be",
+      "bg",
+      "bn",
+      "br",
+      "bs",
+      "ca",
+      "ceb",
+      "cs",
+      "cy",
+      "da",
+      "de",
+      "el",
+      "en",
+      "es",
+      "et",
+      "fa",
+      "ff",
+      "fi",
+      "fr",
+      "fy",
+      "ga",
+      "gd",
+      "gl",
+      "gu",
+      "ha",
+      "he",
+      "hi",
+      "hr",
+      "ht",
+      "hu",
+      "hy",
+      "id",
+      "ig",
+      "ilo",
+      "is",
+      "it",
+      "ja",
+      "jv",
+      "ka",
+      "kk",
+      "km",
+      "kn",
+      "ko",
+      "lb",
+      "lg",
+      "ln",
+      "lo",
+      "lt",
+      "lv",
+      "mg",
+      "mk",
+      "ml",
+      "mn",
+      "mr",
+      "ms",
+      "my",
+      "ne",
+      "nl",
+      "no",
+      "ns",
+      "oc",
+      "or",
+      "pa",
+      "pl",
+      "ps",
+      "pt",
+      "ro",
+      "ru",
+      "sd",
+      "si",
+      "sk",
+      "sl",
+      "so",
+      "sq",
+      "sr",
+      "ss",
+      "su",
+      "sv",
+      "sw",
+      "ta",
+      "th",
+      "tl",
+      "tn",
+      "tr",
+      "uk",
+      "ur",
+      "uz",
+      "vi",
+      "wo",
+      "xh",
+      "yi",
+      "yo",
+      "zh",
+      "zu"
+    ],
+    "supported_targets": [
+      "af",
+      "am",
+      "ar",
+      "ast",
+      "az",
+      "ba",
+      "be",
+      "bg",
+      "bn",
+      "br",
+      "bs",
+      "ca",
+      "ceb",
+      "cs",
+      "cy",
+      "da",
+      "de",
+      "el",
+      "en",
+      "es",
+      "et",
+      "fa",
+      "ff",
+      "fi",
+      "fr",
+      "fy",
+      "ga",
+      "gd",
+      "gl",
+      "gu",
+      "ha",
+      "he",
+      "hi",
+      "hr",
+      "ht",
+      "hu",
+      "hy",
+      "id",
+      "ig",
+      "ilo",
+      "is",
+      "it",
+      "ja",
+      "jv",
+      "ka",
+      "kk",
+      "km",
+      "kn",
+      "ko",
+      "lb",
+      "lg",
+      "ln",
+      "lo",
+      "lt",
+      "lv",
+      "mg",
+      "mk",
+      "ml",
+      "mn",
+      "mr",
+      "ms",
+      "my",
+      "ne",
+      "nl",
+      "no",
+      "ns",
+      "oc",
+      "or",
+      "pa",
+      "pl",
+      "ps",
+      "pt",
+      "ro",
+      "ru",
+      "sd",
+      "si",
+      "sk",
+      "sl",
+      "so",
+      "sq",
+      "sr",
+      "ss",
+      "su",
+      "sv",
+      "sw",
+      "ta",
+      "th",
+      "tl",
+      "tn",
+      "tr",
+      "uk",
+      "ur",
+      "uz",
+      "vi",
+      "wo",
+      "xh",
+      "yi",
+      "yo",
+      "zh",
+      "zu"
+    ],
+    "architecture": "m2m100",
+    "quantization": "int8",
+    "source_model": "facebook/m2m100_418M"
+  },
+  {
+    "id": "index-translate-2b-full",
+    "title": "Index-Translate-2B · Full precision BF16",
+    "family": "Index-Translate-2B",
+    "task": "translation",
+    "repository": "IndexTeam/Index-Translate-2B",
+    "revision": "a516854233b170140b57d36b48d7148c0edebabb",
+    "languages": "150 languages",
+    "license": "Apache-2.0",
+    "architecture": "qwen3_5",
+    "format": "Safetensors",
+    "precision": "bf16",
+    "quantization": "none",
+    "download_only": false,
+    "external_runtime": "Transformers",
+    "guidance": "CUDA BF16 with automatic CPU offloading if needed.",
+    "measured_guidance": "Original weights are BF16, not FP32. See RELEASE_VALIDATION.md for GPU checks; sizes describe storage, not peak VRAM.",
+    "files": [
+      {
+        "name": "README.md",
+        "size": 22374,
+        "sha256": "5e8d4eb670a982143a7487680e0c9fed4baf7cbd2f2e254104d56e18c5e9d971"
+      },
+      {
+        "name": "config.json",
+        "size": 2908,
+        "sha256": "ed1c1723241f23f7f4e23430759cbd7dcfb4103cbdfe052bfe7626b57c2615b4"
+      },
+      {
+        "name": "generation_config.json",
+        "size": 100,
+        "sha256": "5b2e05bd687ce6eb52f8beff6d9dc98a0fb1e02ce8898062869218d17264220f"
+      },
+      {
+        "name": "merges.txt",
+        "size": 3353259,
+        "sha256": "a9d356d7bdf1ef4949e3e748e95b8e10ad9d4e2e838eddc38a0a7b6b94d1db8d"
+      },
+      {
+        "name": "model.safetensors",
+        "size": 4548216776,
+        "sha256": "2f499211fe352913464be69365e2e5724f913051efb3ae2b6fd0fa617a4c0b60"
+      },
+      {
+        "name": "preprocessor_config.json",
+        "size": 390,
+        "sha256": "27225450ac9c6529872ee1924fcb0962ff5634834f817040f444118116f4e516"
+      },
+      {
+        "name": "tokenizer.json",
+        "size": 12807196,
+        "sha256": "fe000e3ed39ed12b8d2481d527d44f93c65d37e87645d2dcc80d1bf9d50d2927"
+      },
+      {
+        "name": "tokenizer_config.json",
+        "size": 16712,
+        "sha256": "e611fbccc7c29ef3b1cafb1cb7ea548d189968632901d678fd62be68c47885de"
+      },
+      {
+        "name": "video_preprocessor_config.json",
+        "size": 386,
+        "sha256": "d039cd7d88b3502a99edd455496b75b44ecf7dd3b3669748bafac37e6cecc085"
+      },
+      {
+        "name": "vocab.json",
+        "size": 6722759,
+        "sha256": "ce99b4cb2983d118806ce0a8b777a35b093e2000a503ebde25853284c9dfa003"
+      }
+    ],
+    "bytes": 4571142860,
+    "supported_sources": [
+      "en",
+      "zh",
+      "ja",
+      "ko",
+      "de",
+      "fr",
+      "ru",
+      "pt",
+      "es",
+      "it",
+      "yue"
+    ]
+  },
+  {
+    "id": "index-translate-2b-q4-k-m",
+    "title": "Index-Translate-2B · 4-bit Q4_K_M",
+    "family": "Index-Translate-2B",
+    "task": "translation",
+    "repository": "IndexTeam/Index-Translate-2B-GGUF",
+    "revision": "449c9e6457b3632d328c6cbb78ae8e8e0c8059a5",
+    "languages": "150 languages",
+    "license": "Apache-2.0",
+    "architecture": "qwen3_5",
+    "format": "GGUF",
+    "precision": "q4_k_m",
+    "quantization": "q4_k_m",
+    "download_only": false,
+    "external_runtime": "llama.cpp",
+    "guidance": "Bundled CUDA runtime; select GPU or CPU.",
+    "measured_guidance": "Original weights are BF16, not FP32. See RELEASE_VALIDATION.md for GPU checks; sizes describe storage, not peak VRAM.",
+    "files": [
+      {
+        "name": "Index-Translate-2B.Q4_K_M.gguf",
+        "size": 1312164352,
+        "sha256": "044b313d29342bd3b2c77cbb64023ca0d209bd9b3247763f9d162767ef2d746a"
+      },
+      {
+        "name": "README.md",
+        "size": 5732,
+        "sha256": "a7cf4090f6ecff7b8c4e5d0f8b4cdab1522d23eb4b990da988b73d052ce2ee03"
+      },
+      {
+        "name": "SHA256SUMS.txt",
+        "size": 1358,
+        "sha256": "bb811c50717048d142359183b5b8ce65633da275752a7e26f62f9cd989e2dc12"
+      }
+    ],
+    "bytes": 1312171442,
+    "supported_sources": [
+      "en",
+      "zh",
+      "ja",
+      "ko",
+      "de",
+      "fr",
+      "ru",
+      "pt",
+      "es",
+      "it",
+      "yue"
+    ]
+  },
+  {
+    "id": "index-translate-9b-full",
+    "title": "Index-Translate-9B · Full precision BF16",
+    "family": "Index-Translate-9B",
+    "task": "translation",
+    "repository": "IndexTeam/Index-Translate-9B",
+    "revision": "710123a9274f2486996d6a63b8d4909a51c4315d",
+    "languages": "150 languages",
+    "license": "Apache-2.0",
+    "architecture": "qwen3_5",
+    "format": "Safetensors",
+    "precision": "bf16",
+    "quantization": "none",
+    "download_only": false,
+    "external_runtime": "Transformers",
+    "guidance": "CUDA BF16 with automatic CPU offloading if needed.",
+    "measured_guidance": "Original weights are BF16, not FP32. See RELEASE_VALIDATION.md for GPU checks; sizes describe storage, not peak VRAM.",
+    "files": [
+      {
+        "name": "README.md",
+        "size": 22536,
+        "sha256": "52a3b1858eb9e893e4c66825bb6b887ab27f93acc8c1399bdfa7f7e76d03a791"
+      },
+      {
+        "name": "config.json",
+        "size": 3126,
+        "sha256": "d0883072e01861ed0b2d47be3c16c36a8e81c224c7ffaa310c6558fb3f932b05"
+      },
+      {
+        "name": "generation_config.json",
+        "size": 100,
+        "sha256": "5b2e05bd687ce6eb52f8beff6d9dc98a0fb1e02ce8898062869218d17264220f"
+      },
+      {
+        "name": "merges.txt",
+        "size": 3353259,
+        "sha256": "a9d356d7bdf1ef4949e3e748e95b8e10ad9d4e2e838eddc38a0a7b6b94d1db8d"
+      },
+      {
+        "name": "model-00001-of-00004.safetensors",
+        "size": 5278251472,
+        "sha256": "60b667c0c334869669f129f7abbecb24b07f8e111a2e6bc059198359ce01f7e7"
+      },
+      {
+        "name": "model-00002-of-00004.safetensors",
+        "size": 5358071808,
+        "sha256": "7cd89432b30065fcc6b20f7e9dec37972c7f70d437a83bbcb4dcad927f3694ac"
+      },
+      {
+        "name": "model-00003-of-00004.safetensors",
+        "size": 5340098264,
+        "sha256": "0dcab64f71cb6aa696f202871dc3222ac39dc15e3ee62c5a75c1a8ff31b82bd5"
+      },
+      {
+        "name": "model-00004-of-00004.safetensors",
+        "size": 3329882376,
+        "sha256": "7f2875ebde5816eda3b4e8c20d04a5898bcfab762977d0880bc1ea4b2e991182"
+      },
+      {
+        "name": "model.safetensors.index.json",
+        "size": 70357,
+        "sha256": "2ade32a7ee117d939d2085e2ae0cbd762dca9d2f34437bdcd2bd334767c0a361"
+      },
+      {
+        "name": "preprocessor_config.json",
+        "size": 390,
+        "sha256": "27225450ac9c6529872ee1924fcb0962ff5634834f817040f444118116f4e516"
+      },
+      {
+        "name": "tokenizer.json",
+        "size": 12807196,
+        "sha256": "fe000e3ed39ed12b8d2481d527d44f93c65d37e87645d2dcc80d1bf9d50d2927"
+      },
+      {
+        "name": "tokenizer_config.json",
+        "size": 16713,
+        "sha256": "3891e840d7dc5fca0af33d3a25083a735e36fe06214e3f707024820cb6b9f89c"
+      },
+      {
+        "name": "video_preprocessor_config.json",
+        "size": 386,
+        "sha256": "d039cd7d88b3502a99edd455496b75b44ecf7dd3b3669748bafac37e6cecc085"
+      },
+      {
+        "name": "vocab.json",
+        "size": 6722759,
+        "sha256": "ce99b4cb2983d118806ce0a8b777a35b093e2000a503ebde25853284c9dfa003"
+      }
+    ],
+    "bytes": 19329300742,
+    "supported_sources": [
+      "en",
+      "zh",
+      "ja",
+      "ko",
+      "de",
+      "fr",
+      "ru",
+      "pt",
+      "es",
+      "it",
+      "yue"
+    ]
+  },
+  {
+    "id": "index-translate-9b-q4-k-m",
+    "title": "Index-Translate-9B · 4-bit Q4_K_M",
+    "family": "Index-Translate-9B",
+    "task": "translation",
+    "repository": "IndexTeam/Index-Translate-9B-GGUF",
+    "revision": "d01404384ba429b93f5f63d43573812d103b5bcd",
+    "languages": "150 languages",
+    "license": "Apache-2.0",
+    "architecture": "qwen3_5",
+    "format": "GGUF",
+    "precision": "q4_k_m",
+    "quantization": "q4_k_m",
+    "download_only": false,
+    "external_runtime": "llama.cpp",
+    "guidance": "Bundled CUDA runtime; select GPU or CPU.",
+    "measured_guidance": "Original weights are BF16, not FP32. See RELEASE_VALIDATION.md for GPU checks; sizes describe storage, not peak VRAM.",
+    "files": [
+      {
+        "name": "Index-Translate-9B.Q4_K_M.gguf",
+        "size": 5780090304,
+        "sha256": "9cc6758b0007f4cbf42ea3400768cbff91ae74ef8d640e467158348426d33713"
+      },
+      {
+        "name": "README.md",
+        "size": 5733,
+        "sha256": "6be5e9be8593b67389409c7a17b0313924b4b7da80b82b937e6b59c3c8f78879"
+      },
+      {
+        "name": "SHA256SUMS.txt",
+        "size": 1358,
+        "sha256": "3e53af75fb8137b72c6bf5b2b8d76bde67beb600c31d2efcba306a3a4db7b6f2"
+      }
+    ],
+    "bytes": 5780097395,
+    "supported_sources": [
+      "en",
+      "zh",
+      "ja",
+      "ko",
+      "de",
+      "fr",
+      "ru",
+      "pt",
+      "es",
+      "it",
+      "yue"
+    ]
+  },
+  {
+    "id": "ark-asr-0.6b-full",
+    "title": "ARK-ASR-0.6B · Full precision BF16",
+    "family": "ARK-ASR-0.6B",
+    "task": "speech",
+    "repository": "Edge0/ARK-ASR-0.6B",
+    "revision": "45776b56d58cdfb2e2eb632f7e110f38684633e0",
+    "languages": "19 languages",
+    "license": "Apache-2.0",
+    "architecture": "arkasr",
+    "format": "Safetensors",
+    "precision": "bf16",
+    "quantization": "none",
+    "download_only": false,
+    "external_runtime": "Transformers with ARK custom code",
+    "guidance": "Bundled CUDA runtime; select GPU or CPU.",
+    "measured_guidance": "Original weights are BF16, not FP32. See RELEASE_VALIDATION.md for GPU checks; sizes describe storage, not peak VRAM.",
+    "files": [
+      {
+        "name": "README.md",
+        "size": 8082,
+        "sha256": "f81a002c34718c38fb3a238e54673b5f0a189e82b6353209866037fcbefa241b"
+      },
+      {
+        "name": "added_tokens.json",
+        "size": 469580,
+        "sha256": "203424360f206e9d432d16aeab31900ee9f8c94bf872cbead953c9db327c7e86"
+      },
+      {
+        "name": "chat_template.jinja",
+        "size": 334,
+        "sha256": "b65159f329e94704814031bb882de38ae9d0ac8955e520044e37ab49b2252ada"
+      },
+      {
+        "name": "config.json",
+        "size": 2828,
+        "sha256": "24d383b963ac31e807e7dc49d515c50a97aa35ecff434995eb64202f1d22f1e8"
+      },
+      {
+        "name": "configuration_arkasr.py",
+        "size": 1619,
+        "sha256": "f7dc852c604f985b675c866e352ce81dfbc69f3a6c69646d0863adf9dd6e3aed"
+      },
+      {
+        "name": "generation_config.json",
+        "size": 131,
+        "sha256": "ebfc270f9b6fa54f4ff848905ee717431bf5caa03673b787a3bb425537d02e51"
+      },
+      {
+        "name": "merges.txt",
+        "size": 1671853,
+        "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5"
+      },
+      {
+        "name": "model.safetensors",
+        "size": 2599020680,
+        "sha256": "57a86ce1c2f2c2d6ebb7ad9642c9e951a5109625122b48c9180126a28787673d"
+      },
+      {
+        "name": "modeling_arkasr.py",
+        "size": 9402,
+        "sha256": "b15aa7f98fc3de644ad68df2ebee3b16229763a0988a273cca92a1bf0ec33333"
+      },
+      {
+        "name": "modeling_audio.py",
+        "size": 11834,
+        "sha256": "645093b34975a9556503384bb10ad9cf23d8b137bbe0cad1cc50715cf0d21fd3"
+      },
+      {
+        "name": "preprocessor_config.json",
+        "size": 434,
+        "sha256": "1e180caf7382179f67c7ffe0ac585d1d639ee9032dadae6868968ffb2e65dd77"
+      },
+      {
+        "name": "processing_arkasr.py",
+        "size": 19160,
+        "sha256": "1db5338f55e714f97eb5d8ed076568897dda7339cb585e3b13fc7d8782c1a94e"
+      },
+      {
+        "name": "processor_config.json",
+        "size": 201,
+        "sha256": "d637206d91054c242bea3f2ab25210582161f0c135cc1aa97c3b068d5e0fbd57"
+      },
+      {
+        "name": "special_tokens_map.json",
+        "size": 434,
+        "sha256": "1c6f70185b3b9ba0cb0ffede543c9a153e27e1d9e2fcc90c50bdfaf13fee2167"
+      },
+      {
+        "name": "tokenizer.json",
+        "size": 13894630,
+        "sha256": "ff07bfc6cf4ed2365e9ae107e5118c89170363624f2036c85a27904d368efd87"
+      },
+      {
+        "name": "tokenizer_config.json",
+        "size": 2354311,
+        "sha256": "f0b39ce6eb0220f3edcda039e9b9990c57cf68cd59abacf6aaf69e14a82041f6"
+      },
+      {
+        "name": "vocab.json",
+        "size": 2776833,
+        "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"
+      }
+    ],
+    "bytes": 2620242346,
+    "supported_sources": [
+      "en",
+      "zh",
+      "ja",
+      "ko",
+      "de",
+      "fr",
+      "ru",
+      "pt",
+      "es",
+      "it",
+      "yue"
+    ]
+  },
+  {
+    "id": "ark-asr-3b-full",
+    "title": "ARK-ASR-3B · Full precision BF16",
+    "family": "ARK-ASR-3B",
+    "task": "speech",
+    "repository": "Edge0/ARK-ASR-3B",
+    "revision": "1e28271b79edc97635783bea65abc89195a09ed3",
+    "languages": "19 languages",
+    "license": "Apache-2.0",
+    "architecture": "arkasr",
+    "format": "Safetensors",
+    "precision": "bf16",
+    "quantization": "none",
+    "download_only": false,
+    "external_runtime": "Transformers with ARK custom code",
+    "guidance": "Bundled CUDA runtime; select GPU or CPU.",
+    "measured_guidance": "Original weights are BF16, not FP32. See RELEASE_VALIDATION.md for GPU checks; sizes describe storage, not peak VRAM.",
+    "files": [
+      {
+        "name": "README.md",
+        "size": 9593,
+        "sha256": "31dfd08976cfdfe9e0386c9579e8818d50af37396093030b295623afa067adb4"
+      },
+      {
+        "name": "added_tokens.json",
+        "size": 760,
+        "sha256": "586b3fa4bf3feefb10232df1b1ddf76d01e1d45481384343fbe22b8632da3350"
+      },
+      {
+        "name": "chat_template.jinja",
+        "size": 334,
+        "sha256": "b65159f329e94704814031bb882de38ae9d0ac8955e520044e37ab49b2252ada"
+      },
+      {
+        "name": "config.json",
+        "size": 3119,
+        "sha256": "caeca44885fbb11f61d5fd7ee9d6e2ac4551a0b38a4fdb4401c8d2bc6103423f"
+      },
+      {
+        "name": "configuration_arkasr.py",
+        "size": 1619,
+        "sha256": "f7dc852c604f985b675c866e352ce81dfbc69f3a6c69646d0863adf9dd6e3aed"
+      },
+      {
+        "name": "generation_config.json",
+        "size": 147,
+        "sha256": "ade5316c0962ced5772ab4317c0430758648e1993cd5c8386df03c0983d2f376"
+      },
+      {
+        "name": "merges.txt",
+        "size": 1671853,
+        "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5"
+      },
+      {
+        "name": "model-00001-of-00002.safetensors",
+        "size": 4996098432,
+        "sha256": "b0f93d36c42c3487d95532c7d54952c7810bf629ee2a2265ed4e2f9e988e5342"
+      },
+      {
+        "name": "model-00002-of-00002.safetensors",
+        "size": 3130890232,
+        "sha256": "db6d540d2b230e322efc17176d7f67ae44a25705bd85c5caccdf5d8c426c072c"
+      },
+      {
+        "name": "model.safetensors.index.json",
+        "size": 82157,
+        "sha256": "cca15b058f9ce515b2cab5521b7ebb932d2600f06ffb5c65350ea86bcd754dcf"
+      },
+      {
+        "name": "modeling_arkasr.py",
+        "size": 9402,
+        "sha256": "b15aa7f98fc3de644ad68df2ebee3b16229763a0988a273cca92a1bf0ec33333"
+      },
+      {
+        "name": "modeling_audio.py",
+        "size": 11834,
+        "sha256": "645093b34975a9556503384bb10ad9cf23d8b137bbe0cad1cc50715cf0d21fd3"
+      },
+      {
+        "name": "preprocessor_config.json",
+        "size": 434,
+        "sha256": "1e180caf7382179f67c7ffe0ac585d1d639ee9032dadae6868968ffb2e65dd77"
+      },
+      {
+        "name": "processing_arkasr.py",
+        "size": 19160,
+        "sha256": "1db5338f55e714f97eb5d8ed076568897dda7339cb585e3b13fc7d8782c1a94e"
+      },
+      {
+        "name": "processor_config.json",
+        "size": 201,
+        "sha256": "d637206d91054c242bea3f2ab25210582161f0c135cc1aa97c3b068d5e0fbd57"
+      },
+      {
+        "name": "special_tokens_map.json",
+        "size": 434,
+        "sha256": "1c6f70185b3b9ba0cb0ffede543c9a153e27e1d9e2fcc90c50bdfaf13fee2167"
+      },
+      {
+        "name": "tokenizer.json",
+        "size": 11422866,
+        "sha256": "bc63972a406328b950c3dea5f64994846a95e444609657d440f0f2ecc4721b32"
+      },
+      {
+        "name": "tokenizer_config.json",
+        "size": 5427,
+        "sha256": "d6ef48bad22668f57a44db107dbbaf15adb8253e77e3012129dbf53c32558bd4"
+      },
+      {
+        "name": "vocab.json",
+        "size": 2776833,
+        "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"
+      }
+    ],
+    "bytes": 8143004837,
+    "supported_sources": [
+      "en",
+      "zh",
+      "ja",
+      "ko",
+      "de",
+      "fr",
+      "ru",
+      "pt",
+      "es",
+      "it",
+      "yue"
+    ]
+  },
+  {
+    "id": "qwen3-asr-1.7b-full",
+    "title": "Qwen3-ASR-1.7B · Full precision BF16",
+    "family": "Qwen3-ASR-1.7B",
+    "task": "speech",
+    "repository": "Qwen/Qwen3-ASR-1.7B-hf",
+    "revision": "bcd2b5b7f32b480ab5790554cfa8347f246a14f3",
+    "languages": "30 languages + 22 Chinese dialects",
+    "license": "Apache-2.0",
+    "architecture": "qwen3_asr",
+    "format": "Safetensors",
+    "precision": "bf16",
+    "quantization": "none",
+    "download_only": false,
+    "external_runtime": "Transformers",
+    "guidance": "Bundled CUDA runtime; select GPU or CPU.",
+    "measured_guidance": "Original weights are BF16, not FP32. See RELEASE_VALIDATION.md for GPU checks; sizes describe storage, not peak VRAM.",
+    "files": [
+      {
+        "name": "README.md",
+        "size": 16538,
+        "sha256": "427b9a6a4a32477e9df8790ef92f5cbcde790ee148ee5dd8c36f77d9556998a2"
+      },
+      {
+        "name": "chat_template.jinja",
+        "size": 1434,
+        "sha256": "f50e6b694fbf4a683206e37869990d68333fe95d285730f084c838a34b0d98c2"
+      },
+      {
+        "name": "config.json",
+        "size": 2399,
+        "sha256": "117ac8e63e2af7cae3665e5a632d6eb03f5f384915519ceb6403c15ec6533f63"
+      },
+      {
+        "name": "generation_config.json",
+        "size": 165,
+        "sha256": "9939fc9388b79bd70757f938b87381e817173d6a6158f5af6506c0b73e775c3c"
+      },
+      {
+        "name": "model.safetensors",
+        "size": 4076193080,
+        "sha256": "2db53c7d81bd9b8cbc6a074e89be2c968a0d373fb4ee68bb1b1e14f7042dfee1"
+      },
+      {
+        "name": "processor_config.json",
+        "size": 487,
+        "sha256": "bc0b230081b44e629dd5b9045b78495615c1831b4b9f4cffe97bd37e82a6156a"
+      },
+      {
+        "name": "tokenizer.json",
+        "size": 11429653,
+        "sha256": "fe1fad59be22a41ee293363fcf95fdedbc7c93f3b49270b1d2e18bd1399a7a05"
+      },
+      {
+        "name": "tokenizer_config.json",
+        "size": 998,
+        "sha256": "945e980986de2ca7768f3326bfdbb4fbea3406f972b8ae0be233089f2b253c11"
+      }
+    ],
+    "bytes": 4087644754,
+    "supported_sources": [
+      "en",
+      "zh",
+      "ja",
+      "ko",
+      "de",
+      "fr",
+      "ru",
+      "pt",
+      "es",
+      "it",
+      "yue"
+    ]
+  },
+  {
+    "id": "qwen3-asr-1.7b-q4-k-m",
+    "title": "Qwen3-ASR-1.7B · 4-bit Q4_K_M",
+    "family": "Qwen3-ASR-1.7B",
+    "task": "speech",
+    "repository": "ldov/Qwen3-ASR-1.7B-gguf",
+    "revision": "72670a53ff1598622ea968904093b71f767d2ffa",
+    "languages": "30 languages + 22 Chinese dialects",
+    "license": "Apache-2.0",
+    "architecture": "qwen3_asr",
+    "format": "GGUF",
+    "precision": "q4_k_m",
+    "quantization": "q4_k_m",
+    "download_only": false,
+    "external_runtime": "transcribe.cpp",
+    "guidance": "Bundled CUDA runtime; select GPU or CPU.",
+    "measured_guidance": "Original weights are BF16, not FP32. See RELEASE_VALIDATION.md for GPU checks; sizes describe storage, not peak VRAM.",
+    "files": [
+      {
+        "name": "Qwen3-ASR-1.7B-Q4_K_M.gguf",
+        "size": 1319830496,
+        "sha256": "b7afe3674f653fa84f712ed2440353c6e7cf7f93697fef76b05a26538b24844e"
+      },
+      {
+        "name": "README.md",
+        "size": 62721,
+        "sha256": "af7f00db48b49be8df81a0a5c91ef2a8c1cb347f470e22cc6339c1e1a5e6a16f"
+      }
+    ],
+    "bytes": 1319893217,
+    "supported_sources": [
+      "en",
+      "zh",
+      "ja",
+      "ko",
+      "de",
+      "fr",
+      "ru",
+      "pt",
+      "es",
+      "it",
+      "yue"
+    ]
+  },
+  {
+    "id": "qwen3-forcedaligner-0.6b-full",
+    "title": "Qwen3-ForcedAligner-0.6B · Full precision BF16",
+    "family": "Qwen3-ForcedAligner-0.6B",
+    "task": "alignment",
+    "repository": "Qwen/Qwen3-ForcedAligner-0.6B-hf",
+    "revision": "c07281df297b9905d24a508279258cccf987a064",
+    "languages": "11 languages",
+    "license": "Apache-2.0",
+    "architecture": "qwen3_forced_aligner",
+    "format": "Safetensors",
+    "precision": "bf16",
+    "quantization": "none",
+    "download_only": false,
+    "external_runtime": "Transformers",
+    "guidance": "Bundled CUDA runtime; select GPU or CPU.",
+    "measured_guidance": "Original weights are BF16, not FP32. See RELEASE_VALIDATION.md for GPU checks; sizes describe storage, not peak VRAM.",
+    "files": [
+      {
+        "name": "README.md",
+        "size": 9419,
+        "sha256": "30de8315ece609b239c719539336b99188a2a92aef89a1fdcd60b11e40abd063"
+      },
+      {
+        "name": "chat_template.jinja",
+        "size": 551,
+        "sha256": "59b5ae119bda7c00089bba5f49af775791ea67c7aeb7d2b828cddda9463121bf"
+      },
+      {
+        "name": "config.json",
+        "size": 248029,
+        "sha256": "82ac390b36a8f80c5a0c4e202367debd149e5d8c30abe4cf5eed439101b1c5ce"
+      },
+      {
+        "name": "model.safetensors",
+        "size": 1835545960,
+        "sha256": "00568245ceca5af1991d28562a75fe1ddc9bfeb041c27fda66947ea05c47fb86"
+      },
+      {
+        "name": "processor_config.json",
+        "size": 487,
+        "sha256": "bc0b230081b44e629dd5b9045b78495615c1831b4b9f4cffe97bd37e82a6156a"
+      },
+      {
+        "name": "tokenizer.json",
+        "size": 11429842,
+        "sha256": "cadfb9cbd9ff8f4e309075ec6a71b063295ff796afb4b5dbc0fd2873fbb301f2"
+      },
+      {
+        "name": "tokenizer_config.json",
+        "size": 998,
+        "sha256": "945e980986de2ca7768f3326bfdbb4fbea3406f972b8ae0be233089f2b253c11"
+      }
+    ],
+    "bytes": 1847235286,
+    "supported_sources": [
+      "en",
+      "zh",
+      "ja",
+      "ko",
+      "de",
+      "fr",
+      "ru",
+      "pt",
+      "es",
+      "it",
+      "yue"
+    ]
+  }
+]

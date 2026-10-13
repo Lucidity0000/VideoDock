@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use VideoDock in your work, cite this software and the upstream tools/models you use. See CREDITS.md."
+type: software
+title: VideoDock
+repository-code: "https://github.com/Lucidity0000/VideoDock"
+version: 0.4.4
+license: MIT
+date-released: 2026-10-13
+authors:
+  - name: Lucidity0000
+    website: "https://github.com/Lucidity0000"
+  - name: VideoDock contributors
+abstract: "A Windows desktop application for persistent video downloads, local captions and subtitle translation."
+keywords:
+  - desktop
+  - video
+  - subtitles
+  - speech-recognition
+  - translation
