@@ -6,9 +6,15 @@ Publish the original `videodock/`, `tests/`, `tools/`, `packaging/`, setup/launc
 
 The project license applies only to original VideoDock material. It does not relicense upstream dependencies. A source-only repository does not redistribute the binaries that users may separately install using the documented setup process.
 
-## Existing 0.4.4 binaries
+## Local binaries (0.4.4 and later)
+
+The 0.6.1 UI follow-up uses separate versioned outputs and retains the 0.6.0 worker/native runtimes. Both 0.5.0 and 0.6.0 release artifacts remain preserved; redistribution obligations and publication status below are unchanged.
+
+The 0.6.0 queue/recovery update uses a new release folder and installer. Its source and worker changes do not complete the redistribution requirements below. The 0.5.0 portable folder, installer and two SHA-256 files remain preserved. Older releases were privately archived and removed locally on October 20; recovery instructions/receipts are in `.test-artifacts/distribution-backup/2026-10-20/maintenance-summary.md`. The 0.5.0 source snapshot is local only; the last known public GitHub source is 0.4.4. No public upload is part of this work.
 
 The local 0.4.4 portable build passed startup/navigation, installed-model selection and a real local-server download. The source suite passed 107 tests and Ruff. These are functional checks, not an assertion that all binary redistribution obligations are complete.
+
+The 0.5.0 build also carries the current LICENSE, credits, citation and distribution documents. This does not complete the exact-version notices, corresponding source, replacement information or proprietary-runtime review below. See [RELEASE_VALIDATION.md](RELEASE_VALIDATION.md) for the validation scope of each version.
 
 **Do not publish the existing bundled installer/portable folder until the following items are completed for the actual shipped files.** Adding citations alone does not meet source/notice obligations.
 

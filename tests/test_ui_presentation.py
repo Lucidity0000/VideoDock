@@ -77,6 +77,7 @@ def test_ranges_and_preview_actions_are_accessible_at_minimum_size(app, store):
     # The first preview row, destination and independent queue stay on screen.
     row_rect = window.preview.visualItemRect(window.preview.item(0, 2))
     assert viewport.rect().contains(window.preview.viewport().mapTo(viewport, row_rect.center()))
+    assert viewport.rect().contains(window.preview.viewport().mapTo(viewport, row_rect.bottomLeft()))
     assert window.queue.viewport().height() >= window.queue.rowHeight(0)
     window.ranges_button.click()
     app.processEvents()

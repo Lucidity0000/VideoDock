@@ -94,6 +94,7 @@ def generate(engine, job, root, cancel, emit):
                     # Speech and translation models are never retained simultaneously.
                     if engine.translation:
                         engine.translation.release()
+                    engine.checkpoint_path = folder / "transcription.json"
                     cues, language = engine.transcribe(source, work, root, settings, cancel, emit, duration)
                     provenance = "Local transcription " + model_spec(settings.caption_model)["revision"]
             if settings.alignment_model and cues:

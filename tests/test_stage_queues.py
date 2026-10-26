@@ -81,6 +81,136 @@ def test_stage_handoff_pause_and_translation_retry(app, store, tmp_path, monkeyp
     c.deleteLater()
 
 
+@pytest.mark.parametrize("auto_caption,auto_translation", [(True, True), (True, False), (False, True)])
+def test_automatic_handoffs_preserve_cleanup_and_independent_options(
+        app, store, tmp_path, monkeypatch, auto_caption, auto_translation):
+    workers = []
+
+    class Worker(QObject):
+        event = Signal(dict)
+        ended = Signal(int)
+
+        def __init__(self, request, parent):
+            super().__init__(parent)
+            self.requests, self.errors = [request], ""
+            self.cancel_timer = QTimer(self)
+            workers.append(self)
+
+        def start(self):
+            pass
+
+        def submit(self, request):
+            self.requests.append(request)
+
+    monkeypatch.setattr(controller, "WorkerProcess", Worker)
+    monkeypatch.setattr(controller, "is_ready", lambda *args: True)
+    settings = DownloadSettings(caption_source="local", caption_mode="sidecar", translate=True, target_languages=("ja",))
+    store.enqueue([{"url": "https://youtu.be/automatic", "title": "Automatic"}], settings, str(tmp_path))
+    job_id = store.jobs()[0]["id"]
+    c = controller.QueueController(store)
+    c.timer.stop()
+    c.set_auto_start("caption", auto_caption)
+    c.set_auto_start("translation", auto_translation)
+    assert not c.running  # Checking options never starts recovered or newly added work.
+    c.start("download")
+    workers[0].event.emit({"type": "media_ready", "output": str(tmp_path / "media.mp4")})
+    c.pump()
+    assert c.caption_id is None and len(workers) == 1
+    assert c.stage_running("caption") == auto_caption
+    workers[0].ended.emit(0)
+    if not auto_caption:
+        assert c.caption_id is None
+        c.start("caption")
+    speech_worker = workers[1]
+    assert c.caption_id == job_id and speech_worker.requests[0]["job"]["defer_translation"]
+    speech_worker.event.emit({"type": "translation_ready", "job_id": job_id,
+                              "cues_path": "durable-source.json", "caption_language_result": "en"})
+    c.pump()
+    assert len(speech_worker.requests) == 1  # Speech still owns the shared inference slot.
+    assert c.stage_running("translation") == auto_translation
+    speech_worker.event.emit({"type": "caption_idle", "job_id": job_id})
+    if not auto_translation:
+        assert c.caption_id is None
+        c.start("translation")
+    assert c.caption_id == job_id and len(speech_worker.requests) == 2
+    assert not speech_worker.requests[1]["job"]["defer_translation"]
+    speech_worker.event.emit({"type": "completed", "job_id": job_id, "output": "translated.mp4",
+                              "caption_status": "complete", "translation_status": "complete"})
+    speech_worker.event.emit({"type": "caption_idle", "job_id": job_id})
+    assert store.get(job_id)["download_status"] == store.get(job_id)["caption_status"] == "complete"
+    assert store.get(job_id)["status"] == "completed"
+    c.caption_worker = None
+    c.deleteLater()
+
+
+def test_automatic_handoffs_respect_explicit_pause_cancellation_and_shutdown(app, store, tmp_path):
+    job_id = add_jobs(store, tmp_path, 1)[0]["id"]
+    c = controller.QueueController(store)
+    c.timer.stop()
+    c.set_auto_start("caption", True)
+    c.set_auto_start("translation", True)
+    # Avoid starting real workers: exercise the handoff events with an armed download queue.
+    c.running = True
+    c.started_stages.add("download")
+    c.paused_stages.discard("download")
+    c.pause("caption")
+    c._event(job_id, {"type": "media_ready", "output": "media.mp4"})
+    assert not c.stage_running("caption")
+    c.set_auto_start("caption", True)
+    c._event(job_id, {"type": "media_ready", "output": "media.mp4"})
+    assert c.stage_running("caption")
+    c.pause("translation")
+    c._event(job_id, {"type": "translation_ready", "cues_path": "source.json", "caption_language_result": "en"})
+    assert not c.stage_running("translation")
+    c.pause()
+    c._event(job_id, {"type": "media_ready", "output": "media.mp4"})
+    assert not c.running and not c.stage_running("caption")
+    c.set_auto_start("caption", True)
+    c.running = True
+    c.paused_stages.discard("download")
+    store.update(job_id, status="cancelling")
+    c._event(job_id, {"type": "media_ready", "output": "media.mp4"})
+    assert store.get(job_id)["status"] == "cancelled" and not c.stage_running("caption")
+    c.shutting_down = True
+    store.update(job_id, status="queued")
+    c._event(job_id, {"type": "media_ready", "output": "media.mp4"})
+    assert not c.stage_running("caption")
+    c.deleteLater()
+
+
+def test_pausing_upstream_allows_its_active_job_to_handoff(app, store, tmp_path, monkeypatch):
+    job_id = add_jobs(store, tmp_path, 1)[0]["id"]
+    c = controller.QueueController(store)
+    c.timer.stop()
+    monkeypatch.setattr(c, "pump", lambda: None)
+    c.set_auto_start("caption", True)
+    c.set_auto_start("translation", True)
+    c.start("download")
+    c.pause("download")
+    assert not c.running
+    c._event(job_id, {"type": "media_ready", "output": "media.mp4"})
+    assert c.stage_running("caption") and not c.stage_running("download")
+    c.pause("caption")
+    assert not c.running
+    c._event(job_id, {"type": "translation_ready", "cues_path": "source.json", "caption_language_result": "en"})
+    assert c.stage_running("translation") and not c.stage_running("caption")
+    c.deleteLater()
+
+
+def test_automatic_options_persist_but_queues_open_paused(app, store):
+    window = MainWindow(store)
+    assert not window.auto_caption.isChecked() and not window.auto_translation.isChecked()
+    window.auto_caption.click()
+    window.auto_translation.click()
+    assert store.preference("auto_start_caption") and store.preference("auto_start_translation")
+    assert not window.controller.running
+    window.close()
+    reopened = MainWindow(store)
+    assert reopened.auto_caption.isChecked() and reopened.auto_translation.isChecked()
+    assert not reopened.controller.running and len(reopened.controller.paused_stages) == 3
+    reopened.close()
+
+
 def test_pipeline_defers_translation_and_reuses_durable_source(tmp_path, monkeypatch):
     from test_translation import fake_translation, imported_job
 

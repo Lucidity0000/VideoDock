@@ -6,6 +6,11 @@ Push-Location $projectRoot
 try {
     $releaseVersion = (& $Python -c "import videodock; print(videodock.__version__)").Trim()
     $releaseFolder = [IO.Path]::GetFullPath((Join-Path $projectRoot "dist\VideoDock-$releaseVersion"))
+    foreach ($target in @($releaseFolder, (Join-Path $projectRoot "dist\VideoDock-Setup-$releaseVersion.exe"),
+                          (Join-Path $projectRoot "dist\VideoDock-$releaseVersion-SHA256SUMS.txt"),
+                          (Join-Path $projectRoot "dist\VideoDock-$releaseVersion-SHA256FILES.txt"))) {
+        if (Test-Path -LiteralPath $target) { throw 'Release artifacts already exist. Use a new version and output folder.' }
+    }
     $workerPath = [IO.Path]::GetFullPath((Join-Path $projectRoot 'vendor\VideoDockWorker.exe'))
     $runningCopies = Get-Process | Where-Object {
         try { $_.Path -and ($_.Path.StartsWith($releaseFolder + '\', [StringComparison]::OrdinalIgnoreCase) -or $_.Path -eq $workerPath) }

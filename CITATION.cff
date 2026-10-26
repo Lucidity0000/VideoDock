@@ -3,9 +3,9 @@ message: "If you use VideoDock in your work, cite this software and the upstream
 type: software
 title: VideoDock
 repository-code: "https://github.com/Lucidity0000/VideoDock"
-version: 0.4.4
+version: 0.6.1
 license: MIT
-date-released: 2026-10-13
+date-released: 2026-10-27
 authors:
   - name: Lucidity0000
     website: "https://github.com/Lucidity0000"

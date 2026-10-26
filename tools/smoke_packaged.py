@@ -34,6 +34,12 @@ def main():
     assert report["history_columns"][3:6] == ["Download", "Captions", "Translation"]
     assert report["clear_history_actions"] == ["Clear selected history", "Clear cancelled history"]
     assert report["model_tabs"] == ["Speech models", "Translation models", "Alignment models"]
+    assert report["saved_lists"]["remaining_entries"] == 1 and report["saved_lists"]["added_from_other_link"]
+    assert report["auto_start"] == {"caption": True, "translation": True, "queues_paused": True}
+    assert report["queue_controls"] == {"bulk_edit": True, "comparison": True, "job_pause_resume": True,
+                                        "schedules": True, "timeline": True, "power_executed": False,
+                                        "settings_in_queues": True, "apply_all_changed": True,
+                                        "cancelled_schedules_hidden": True}
     assert len(report["resource_models"]) == 9
     assert set(report["speech_selector"]) == {"base", "small", "turbo", "large-v3", "distil-v3.5",
                                             "ark-asr-0.6b-full", "ark-asr-3b-full",

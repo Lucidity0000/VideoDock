@@ -1,4 +1,4 @@
-#define AppVersion "0.4.4"
+#define AppVersion "0.6.1"
 [Setup]
 AppId={{C46AFA27-8D14-4E76-8F34-D2B6C116A93E}
 AppName=VideoDock
@@ -21,6 +21,10 @@ CloseApplications=yes
 Source: "..\dist\VideoDock-{#AppVersion}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\CREDITS.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\CITATION.cff"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\DISTRIBUTION.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\RELEASE_VALIDATION.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dependencies.lock.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "inference-runtime.lock.json"; DestDir: "{app}"; Flags: ignoreversion

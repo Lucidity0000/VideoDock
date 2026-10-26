@@ -18,6 +18,7 @@ ACTIVE = {
     "exporting",
 }
 CAPTION_PENDING = {"caption_queued", "translation_queued", "waiting_model"}
+PENDING = CAPTION_PENDING | {"queued", "paused", "retry_wait"}
 TERMINAL = {"completed", "partial", "failed", "cancelled"}
 DEFAULT_TEMPLATE = "%(title).160s [%(id)s]"
 
@@ -99,6 +100,11 @@ class DownloadSettings:
     spoken_language: str = "auto"
     caption_device: str = "cpu"
     cpu_fallback: bool = True
+    fallback_model: str = ""
+    fallback_revision: str = ""
+    retry_categories: tuple[str, ...] = ()
+    retry_limit: int = 3
+    retry_delay: int = 30
     caption_line_length: int = 42
     caption_max_duration: int = 6
     chinese_script: str = "original"  # original, zh-Hans, zh-Hant
@@ -152,6 +158,17 @@ class DownloadSettings:
 
         if model_spec(self.caption_model, self.model_revision).get("task", "speech") != "speech":
             raise ValueError("Choose a speech model from the built-in catalog.")
+        if self.fallback_model:
+            if model_spec(self.fallback_model, self.fallback_revision).get("task", "speech") != "speech":
+                raise ValueError("Choose a speech model for failed segments.")
+            if self.fallback_model == self.caption_model:
+                raise ValueError("The fallback speech model must differ from the primary model.")
+            if self.fallback_model == "distil-v3.5" and self.spoken_language not in {"auto", "en"}:
+                raise ValueError("The fallback Distil model supports English only.")
+        if not set(self.retry_categories) <= {"network", "rate_limit", "server"}:
+            raise ValueError("Choose network, rate limit or server failures for automatic retries.")
+        if not 0 <= self.retry_limit <= 10 or not 1 <= self.retry_delay <= 3600:
+            raise ValueError("Use 0–10 retries and a retry delay of 1–3600 seconds.")
         if self.alignment_model:
             if model_spec(self.alignment_model, self.alignment_revision).get("task") != "alignment":
                 raise ValueError("Choose an alignment model from the built-in catalog.")
@@ -232,7 +249,7 @@ class DownloadSettings:
     @classmethod
     def from_dict(cls, value: dict) -> DownloadSettings:
         fields = {key: val for key, val in value.items() if key in cls.__dataclass_fields__}
-        for key in ("target_languages", "track_order"):
+        for key in ("target_languages", "track_order", "retry_categories"):
             if key in fields:
                 fields[key] = tuple(fields[key])
         return cls(**fields)

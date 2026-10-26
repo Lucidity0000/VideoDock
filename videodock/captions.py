@@ -240,6 +240,11 @@ class CaptionEngine:
         return generate(self, job, root, cancel, emit)
 
     def transcribe(self, source, work, root, settings, cancel, emit, duration):
+        from .transcription import transcribe_segments
+
+        return transcribe_segments(self, source, work, root, settings, cancel, emit, duration)
+
+    def _transcribe_segment(self, source, work, root, settings, cancel, emit, duration):
         self.alignment_segments = []
         spec = model_spec(settings.caption_model, settings.model_revision)
         if not is_ready(root, spec):

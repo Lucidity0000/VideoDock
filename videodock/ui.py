@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMainWindow,
+    QMenu,
     QMessageBox,
     QPlainTextEdit,
     QProgressBar,
@@ -40,7 +41,8 @@ from .controller import QueueController, WorkerProcess
 from .dependencies import dependency_report
 from .media import check_destination
 from .model_ui import refresh_download, refresh_selector
-from .models import ACTIVE, CAPTION_PENDING, DownloadSettings, parse_intervals, parse_urls
+from .models import ACTIVE, PENDING, DownloadSettings, parse_intervals, parse_urls
+from .saved_lists_ui import SavedListEditor, SaveListDialog
 from .store import Store
 from .theme import ASSETS, STYLE, apply_palette, status_color
 from .translation_ui import TranslationPanel
@@ -150,6 +152,18 @@ class SettingsPanel(QFrame):
             combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
             combo.setMinimumContentsLength(14)
         self.cpu_fallback = QCheckBox("Use CPU if GPU is unavailable")
+        self.fallback_model = QComboBox()
+        self.fallback_model.addItem("Off · report failed speech segments", "")
+        for spec in task_models("speech", usable_only=True):
+            self.fallback_model.addItem(spec["title"], spec["id"])
+        self.retry_checks = {}
+        for key, title in (("network", "Connection failures / timeouts"), ("rate_limit", "HTTP 429 rate limits"), ("server", "HTTP 500 / 502 / 503 / 504")):
+            self.retry_checks[key] = QCheckBox(title)
+        self.retry_limit = QSpinBox()
+        self.retry_limit.setRange(0, 10)
+        self.retry_delay = QSpinBox()
+        self.retry_delay.setRange(1, 3600)
+        self.retry_delay.setSuffix(" seconds")
         self.line_length = QSpinBox()
         self.line_length.setRange(20, 100)
         self.cue_duration = QSpinBox()
@@ -180,6 +194,10 @@ class SettingsPanel(QFrame):
                           ("Audio quality", self.bitrate), ("Filename", self.template)])
         form.addRow("", self.convert)
         form.addRow("", label("Audio downloads save captions as separate files.", "muted"))
+        form.addRow(label("Automatic retries (initially off)", "section"))
+        for control in self.retry_checks.values():
+            form.addRow("", control)
+        self._rows(form, [("Maximum retries per stage", self.retry_limit), ("Initial delay (exponential backoff)", self.retry_delay)])
         captions, form = self._page("Captions", "Source and subtitle files")
         self._rows(form, [("Captions", self.mode), ("Caption source", self.source),
                           ("YouTube language", self.language), ("Caption file", self.caption_format),
@@ -199,6 +217,8 @@ class SettingsPanel(QFrame):
         form.addRow("", self._model_row(self.alignment_status, self.alignment_download))
         self._rows(form, [("Spoken language", self.spoken), ("Inference device", self.device)])
         form.addRow("", self.cpu_fallback)
+        self._rows(form, [("Failed segment fallback", self.fallback_model)])
+        form.addRow("", label("Retries only failed 30-second speech segments with the selected installed model. Completed segments are checkpointed. No model is downloaded automatically.", "muted"))
         form.addRow("", label("Install and select models on the Models page. ARK needs an explicit spoken language for translation or alignment.", "muted"))
         form.addRow(label("Cue timing and readability", "section"))
         self._rows(form, [("Characters per line", self.line_length), ("Maximum cue duration", self.cue_duration)])
@@ -219,6 +239,7 @@ class SettingsPanel(QFrame):
         self.device.currentIndexChanged.connect(self._device_changed)
         self.local_model.currentIndexChanged.connect(self.refresh_models)
         self.alignment_model.currentIndexChanged.connect(self.refresh_models)
+        self.fallback_model.currentIndexChanged.connect(self.refresh_models)
         self.language.currentTextChanged.connect(self._availability)
         self._enabled()
         self._languages()
@@ -275,6 +296,7 @@ class SettingsPanel(QFrame):
             refresh_selector(combo, self.model_root, self.model_workers, self.model_states)
             refresh_download(combo, status, download, self.model_root, self.model_workers, self.model_states)
         self.translation_panel.refresh_model(self.model_root, self.model_workers, self.model_states)
+        refresh_selector(self.fallback_model, self.model_root, self.model_workers, self.model_states)
 
     def bind_models(self, store, controller):
         self.model_store, self.model_controller = store, controller
@@ -290,6 +312,7 @@ class SettingsPanel(QFrame):
             (self.source, settings.caption_source),
             (self.local_model, settings.caption_model),
             (self.alignment_model, settings.alignment_model),
+            (self.fallback_model, settings.fallback_model),
             (self.device, settings.caption_device),
             (self.chinese, settings.chinese_script),
         ]:
@@ -300,6 +323,10 @@ class SettingsPanel(QFrame):
         self.template.setText(settings.filename_template)
         self.spoken.setCurrentText(settings.spoken_language)
         self.cpu_fallback.setChecked(settings.cpu_fallback)
+        for key, control in self.retry_checks.items():
+            control.setChecked(key in settings.retry_categories)
+        self.retry_limit.setValue(settings.retry_limit)
+        self.retry_delay.setValue(settings.retry_delay)
         self.line_length.setValue(settings.caption_line_length)
         self.cue_duration.setValue(settings.caption_max_duration)
         self.translation_panel.load(settings)
@@ -323,6 +350,10 @@ class SettingsPanel(QFrame):
             spoken_language=self.spoken.currentText().strip().lower(),
             caption_device=self.device.currentData(),
             cpu_fallback=self.cpu_fallback.isChecked(),
+            fallback_model=self.fallback_model.currentData(),
+            retry_categories=tuple(key for key, control in self.retry_checks.items() if control.isChecked()),
+            retry_limit=self.retry_limit.value(),
+            retry_delay=self.retry_delay.value(),
             caption_line_length=self.line_length.value(),
             caption_max_duration=self.cue_duration.value(),
             chinese_script=self.chinese.currentData(),
@@ -543,6 +574,8 @@ class MainWindow(QMainWindow):
         self.controller.models_changed.connect(self.refresh_models)
         self.controller.message.connect(self.show_notice)
         self.controller.idle.connect(self._close_when_idle)
+        from .desktop import DesktopIntegration
+        self.desktop = DesktopIntegration(self)
         recovered = store.recover()
         self.refresh_jobs()
         if recovered:
@@ -556,14 +589,34 @@ class MainWindow(QMainWindow):
         left = QFrame()
         left.setObjectName("sourceCard")
         pane = QVBoxLayout(left)
-        pane.setContentsMargins(12, 10, 12, 10)
-        pane.setSpacing(6)
+        pane.setContentsMargins(12, 8, 12, 8)
+        pane.setSpacing(4)
+        self.saved_list_controls = QWidget()
+        saved = QHBoxLayout(self.saved_list_controls)
+        saved.setContentsMargins(0, 0, 0, 0)
+        saved.addWidget(label("Saved lists"))
+        self.saved_lists = QComboBox()
+        self.saved_lists.setMinimumContentsLength(18)
+        self.saved_lists.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.saved_lists.setAccessibleName("Favorite playlists and custom lists")
+        saved.addWidget(self.saved_lists, 1)
+        self.load_list_button = button("Load list", self.load_saved_list)
+        self.save_list_button = button("Save as…", self.save_preview_list)
+        self.add_to_list_button = button("Add selected", self.add_to_saved_list)
+        self.edit_list_button = button("Edit list…", self.edit_saved_list)
+        self.add_to_list_button.setToolTip("Append checked preview entries from any link to the chosen saved list.")
+        for control in (self.load_list_button, self.save_list_button, self.add_to_list_button, self.edit_list_button):
+            saved.addWidget(control)
+        pane.addWidget(self.saved_list_controls)
+        self.saved_list_controls.hide()
+        self.saved_lists.currentIndexChanged.connect(self.saved_list_selected)
+        self.refresh_saved_lists()
         top = QHBoxLayout()
         links = QVBoxLayout()
         self.urls = QPlainTextEdit()
         self.urls.setPlaceholderText("Paste video or playlist links, one per line…")
         self.urls.setAccessibleName("Video and playlist links")
-        self.urls.setFixedHeight(54)
+        self.urls.setFixedHeight(44)
         links.addWidget(self.urls)
         actions = QHBoxLayout()
         self.preview_button = button("Preview links", self.inspect, True)
@@ -578,18 +631,23 @@ class MainWindow(QMainWindow):
         detail = QHBoxLayout()
         self.thumbnail = QLabel("VIDEO")
         self.thumbnail.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.thumbnail.setFixedSize(96, 54)
+        self.thumbnail.setFixedSize(96, 44)
         self.thumbnail.setStyleSheet("background:#203249; color:#a4bdd7; border-radius:7px;")
         detail.addWidget(self.thumbnail)
         self.preview_description = label(
             "Preview titles, choose playlist entries, then add them to the queue.", "muted"
         )
-        self.preview_description.setMaximumHeight(54)
+        self.preview_description.setMaximumHeight(44)
         detail.addWidget(self.preview_description, 1)
+        self.saved_lists_button = button("Saved lists…", lambda: None)
+        self.saved_lists_button.setCheckable(True)
+        self.saved_lists_button.setToolTip("Save favorite playlists, create custom lists and edit their entries.")
+        self.saved_lists_button.toggled.connect(self.saved_list_controls.setVisible)
+        detail.addWidget(self.saved_lists_button)
         top.addLayout(detail, 2)
         pane.addLayout(top)
         pane.addLayout(actions)
-        self.preview = table(["✓", "#", "Title", "Duration", "Playlist", "Settings"])
+        self.preview = table(["✓", "#", "Title", "Duration", "Playlist"])
         self.preview.set_empty_message("Your next download starts here", "Preview links above to choose videos.")
         self.preview.setAccessibleName("Preview videos; first column selects each download")
         self.preview.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
@@ -605,6 +663,8 @@ class MainWindow(QMainWindow):
         self.override_button.setEnabled(False)
         selection.addWidget(self.detail_button)
         selection.addWidget(self.override_button)
+        self.preview.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.preview.customContextMenuRequested.connect(self.preview_settings_menu)
         self.ranges_button = button("Ranges…", lambda: None)
         self.ranges_button.setCheckable(True)
         self.ranges_button.setToolTip("Show inclusive playlist position controls.")
@@ -635,6 +695,10 @@ class MainWindow(QMainWindow):
         left_scroll.setWidgetResizable(True)
         left_scroll.setWidget(left)
         self.preview_scroll = left_scroll
+        self.saved_lists_button.toggled.connect(
+            lambda visible: QTimer.singleShot(0, lambda: left_scroll.ensureWidgetVisible(self.saved_list_controls))
+            if visible else None
+        )
         self.ranges_button.toggled.connect(
             lambda visible: QTimer.singleShot(
                 0, lambda: left_scroll.ensureWidgetVisible(self.range_controls)
@@ -665,6 +729,17 @@ class MainWindow(QMainWindow):
         options.addWidget(self.duplicates)
         options.addStretch()
         layout.addLayout(options)
+        automation = QHBoxLayout()
+        self.auto_caption = QCheckBox("Auto-start captioning after download")
+        self.auto_translation = QCheckBox("Auto-start translation after captioning")
+        for control, stage in ((self.auto_caption, "caption"), (self.auto_translation, "translation")):
+            control.setChecked(self.store.preference(f"auto_start_{stage}", False))
+            control.setToolTip("Resume this queue at the next successful handoff. Pause queue holds it until "
+                               "you start it or re-enable this option. The app always opens paused.")
+            control.toggled.connect(lambda checked, value=stage: self.controller.set_auto_start(value, checked))
+            automation.addWidget(control)
+        automation.addStretch()
+        layout.addLayout(automation)
         shared = QHBoxLayout()
         self.settings_summary = label("", "muted")
         shared.addWidget(self.settings_summary, 1)
@@ -694,6 +769,19 @@ class MainWindow(QMainWindow):
             self.remove_button,
         ]:
             queue_header.addWidget(control)
+        self.queue_tools = button("More…", lambda: None)
+        menu = QMenu(self.queue_tools)
+        menu.addAction("Edit selected pending jobs…", self.bulk_edit_jobs)
+        menu.addAction("Compare selected with shared settings…", self.compare_jobs)
+        menu.addAction("Pause selected jobs", lambda: self.controller.pause_jobs(self.selected_job_ids()))
+        menu.addAction("Resume selected jobs", lambda: self.controller.resume_jobs(self.selected_job_ids()))
+        menu.addAction("Job timeline…", self.show_timeline)
+        menu.addSeparator()
+        menu.addAction("Queue schedules…", self.queue_schedules)
+        menu.addAction("Background and completion…", self.queue_options)
+        menu.addAction("Hide to tray", self.hide_to_tray)
+        self.queue_tools.setMenu(menu)
+        queue_header.addWidget(self.queue_tools)
         layout.addLayout(queue_header)
         caption_row = QHBoxLayout()
         caption_row.addWidget(self.required_model_button)
@@ -703,7 +791,7 @@ class MainWindow(QMainWindow):
         self.queue_tabs = QTabWidget()
         self.stage_queues = {}
         for stage, title in (("download", "Downloading"), ("caption", "Captioning"), ("translation", "Translating")):
-            queue = table(["#", "Title", "Format", "Status", "Progress", "Speed", "ETA"])
+            queue = table(["#", "Title", "Format", "Status", "Progress", "Speed", "ETA", "Settings"])
             empty = {
                 "download": ("Ready for your next video", "Add videos above, then start this queue."),
                 "caption": ("Give your videos a voice", "Caption jobs appear after downloads or Generate captions in History."),
@@ -711,6 +799,8 @@ class MainWindow(QMainWindow):
             }
             queue.set_empty_message(*empty[stage])
             queue.setAccessibleName(f"Persistent {stage} queue")
+            queue.enable_queue_drag()
+            queue.reorder_requested.connect(lambda identifiers, before, stage=stage: self.reorder_jobs(identifiers, before, stage))
             queue.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
             queue.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
             queue.setColumnWidth(4, 160)
@@ -724,7 +814,7 @@ class MainWindow(QMainWindow):
         self.translation_queue = self.stage_queues["translation"]
         self.queue_tabs.currentChanged.connect(self.queue_changed)
         layout.addWidget(self.queue_tabs, 1)
-        self.queue_tabs.setToolTip("Start each queue separately. Captioning and translation share one inference slot; downloads run independently.")
+        self.queue_tabs.setToolTip("Start each queue or enable the automatic handoffs above. Captioning and translation share one inference slot.")
         return widget
 
     def _download_settings(self):
@@ -750,10 +840,42 @@ class MainWindow(QMainWindow):
         except ValueError as exc:
             self.show_notice(str(exc))
 
-    def update_settings_summary(self, *_):
+    def update_settings_summary(self, *_, refresh_indicators=True):
         panel = self.settings_panel
         resolution = panel.height.currentText() if panel.format.currentData() in {"mp4", "webm"} else panel.bitrate.currentText()
         self.settings_summary.setText(f"{panel.format.currentData().upper()} · {resolution} · {panel.mode.currentText()}")
+        if refresh_indicators:
+            self.refresh_queue_settings()
+
+    def shared_comparison_settings(self):
+        try:
+            return self.settings_panel.settings().to_dict()
+        except ValueError:
+            return None
+
+    @staticmethod
+    def queue_settings_indicator(settings, shared):
+        from .queue_ui import differences, display
+
+        if shared is None:
+            return "—", "Complete the shared settings to compare this job's saved values."
+        changes = differences(settings, shared)
+        if not changes:
+            return "Shared", "Matches the current shared settings. Queued jobs keep their saved values."
+        return "Custom", "Differences from current shared settings (shared → job):\n" + "\n".join(
+            f"{key.replace('_', ' ')}: {display(baseline)} → {display(value)}" for key, baseline, value in changes)
+
+    def refresh_queue_settings(self):
+        shared = self.shared_comparison_settings()
+        for queue in self.stage_queues.values():
+            for row in range(queue.rowCount()):
+                identifier = queue.item(row, 0)
+                cell = queue.item(row, 7)
+                job = self.store.get(identifier.data(Qt.ItemDataRole.UserRole)) if identifier else None
+                if job and cell:
+                    text, detail = self.queue_settings_indicator(job["settings"], shared)
+                    cell.setText(text)
+                    cell.setToolTip(detail)
 
     def refresh_models(self):
         self.settings_panel.refresh_models(storage_folder(self.store), self.controller.model_workers,
@@ -831,6 +953,8 @@ class MainWindow(QMainWindow):
         self.concurrency.valueChanged.connect(self.set_concurrency)
         form.addRow("Concurrent downloads", self.concurrency)
         layout.addLayout(form)
+        queue_options = button("Background, notifications and completion…", self.queue_options)
+        layout.addWidget(queue_options)
         caption_actions = QHBoxLayout()
         caption_actions.addWidget(button("Import local media for captions…", self.import_local_media))
         caption_actions.addWidget(button("Import SRT/VTT…", self.import_subtitles))
@@ -882,6 +1006,7 @@ class MainWindow(QMainWindow):
             return
         worker = WorkerProcess(request, self)
         self.background = worker
+        self.saved_list_selected()
         worker.event.connect(handler)
         worker.ended.connect(lambda code: self._background_done(worker, code))
         self.preview_button.setEnabled(False)
@@ -893,6 +1018,7 @@ class MainWindow(QMainWindow):
 
     def _background_done(self, worker: WorkerProcess, code: int):
         self.background = None
+        self.saved_list_selected()
         if worker.request["action"] == "update_install":
             self.controller.maintenance = False
             self.refresh_jobs()
@@ -919,6 +1045,11 @@ class MainWindow(QMainWindow):
             return
         if self.background:
             return
+        self.reset_preview()
+        self.show_notice("Inspecting links and playlists…")
+        self._background_request({"action": "inspect", "urls": urls}, self._preview_event)
+
+    def reset_preview(self):
         self.items.clear()
         self.preview_errors.clear()
         self.preview_warnings.clear()
@@ -928,8 +1059,90 @@ class MainWindow(QMainWindow):
         self.update_preview_controls()
         self.range_playlist.clear()
         self.range_playlist.addItem("All playlists", "")
-        self.show_notice("Inspecting links and playlists…")
-        self._background_request({"action": "inspect", "urls": urls}, self._preview_event)
+
+    def checked_preview_items(self):
+        return [item for row, item in enumerate(self.items)
+                if self.preview.item(row, 0).checkState() == Qt.CheckState.Checked]
+
+    def refresh_saved_lists(self, selected_id=None):
+        selected_id = selected_id or self.saved_lists.currentData() or self.store.preference("selected_saved_list", "")
+        self.saved_lists.blockSignals(True)
+        self.saved_lists.clear()
+        self.saved_lists.addItem("Choose a saved list…", "")
+        for saved in self.store.saved_lists():
+            kind = "Favorite" if saved["kind"] == "favorite" else "Custom"
+            # Limit the display length while retaining the full name in the tooltip/editor.
+            self.saved_lists.addItem(f"{kind} · {saved['name'][:55]} ({saved['count']})", saved["id"])
+            self.saved_lists.setItemData(self.saved_lists.count() - 1, saved["name"], Qt.ItemDataRole.ToolTipRole)
+        self.saved_lists.setCurrentIndex(max(0, self.saved_lists.findData(selected_id)))
+        self.saved_lists.blockSignals(False)
+        self.saved_list_selected()
+
+    def saved_list_selected(self, *_):
+        selected = bool(self.saved_lists.currentData())
+        identifier = self.saved_lists.currentData() or ""
+        if self.store.preference("selected_saved_list", "") != identifier:
+            self.store.set_preference("selected_saved_list", identifier)
+        self.load_list_button.setEnabled(selected and self.background is None)
+        self.edit_list_button.setEnabled(selected)
+        self.add_to_list_button.setEnabled(selected and hasattr(self, "preview") and bool(self.checked_preview_items()))
+
+    def save_preview_list(self):
+        items = self.checked_preview_items()
+        playlists = list(dict.fromkeys(item["playlist"] for item in items if item.get("playlist")))
+        dialog = SaveListDialog(bool(items), playlists[0] if len(playlists) == 1 else "", self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            try:
+                included = items if dialog.include_selected.isChecked() else []
+                try:
+                    sources = parse_urls(self.urls.toPlainText()) if included else []
+                except ValueError:
+                    sources = []
+                identifier = self.store.create_saved_list(dialog.name.text(), dialog.kind.currentData(), sources, included)
+                self.refresh_saved_lists(identifier)
+                self.show_notice(f"Saved {len(self.store.saved_list(identifier)['items'])} entries. "
+                                 "Preview any links and use Add selected to extend this list.")
+            except ValueError as exc:
+                self.show_notice(str(exc))
+        dialog.deleteLater()
+
+    def add_to_saved_list(self):
+        identifier = self.saved_lists.currentData()
+        if not identifier:
+            self.show_notice("Choose a saved list first, or use Save as… to create one.")
+            return
+        try:
+            added, skipped = self.store.add_saved_items(identifier, self.checked_preview_items())
+            self.refresh_saved_lists(identifier)
+            self.show_notice(f"Added {added} entries to the saved list; {skipped} already present. "
+                             "Load list to preview the saved entries.")
+        except ValueError as exc:
+            self.show_notice(str(exc))
+
+    def load_saved_list(self):
+        if self.background:
+            self.show_notice("Wait for the current preview or engine operation to finish before loading a list.")
+            return
+        saved = self.store.saved_list(self.saved_lists.currentData())
+        if not saved:
+            return
+        self.reset_preview()
+        self.urls.setPlainText("\n".join(item["url"] for item in saved["items"]))
+        for item in saved["items"]:
+            self._preview_event({"type": "item", "item": item})
+        self.saved_lists_button.setChecked(False)
+        self.preview_scroll.verticalScrollBar().setValue(0)
+        self.show_notice(f"Loaded {len(saved['items'])} saved entries from {saved['name']}. "
+                         "Current download settings apply. Inspect selected to refresh formats and caption languages.")
+
+    def edit_saved_list(self):
+        identifier = self.saved_lists.currentData()
+        if not identifier or not self.store.saved_list(identifier):
+            return
+        dialog = SavedListEditor(self.store, identifier, self)
+        dialog.changed.connect(self.refresh_saved_lists)
+        dialog.exec()
+        dialog.deleteLater()
 
     def _preview_event(self, event: dict):
         if event["type"] == "item":
@@ -954,7 +1167,6 @@ class MainWindow(QMainWindow):
                     item["title"],
                     duration_text(item["duration"]),
                     item["playlist"],
-                    "Shared",
                 ],
                 1,
             ):
@@ -1000,6 +1212,7 @@ class MainWindow(QMainWindow):
                     for row in range(self.preview.rowCount()))
         self.preview_count.setText(f"{count} selected")
         self.enqueue_button.setEnabled(count > 0)
+        self.saved_list_selected()
 
     def interval_rows(self) -> list[int]:
         ranges = parse_intervals(self.intervals.text())
@@ -1119,8 +1332,100 @@ class MainWindow(QMainWindow):
         dialog = OverrideDialog(settings, self.items[row], self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.overrides[row] = dialog.panel.settings()
-            self.preview.item(row, 5).setText(self.overrides[row].format.upper() + " · custom")
         dialog.deleteLater()
+
+    def preview_settings_menu(self, position):
+        menu = QMenu(self.preview)
+        menu.addAction("Compare item settings with shared…", self.compare_preview)
+        menu.exec(self.preview.viewport().mapToGlobal(position))
+
+    def compare_preview(self):
+        from .queue_ui import ComparisonDialog
+        try:
+            shared = self.settings_panel.settings().to_dict()
+            rows = [index.row() for index in self.preview.selectionModel().selectedRows()]
+            if not rows:
+                rows = list(range(len(self.items)))
+            entries = [(self.items[row]["title"], self.overrides[row].to_dict() if row in self.overrides else shared)
+                       for row in rows]
+            ComparisonDialog(entries, shared, self).exec()
+        except ValueError as exc:
+            self.show_notice(str(exc))
+
+    def bulk_edit_jobs(self):
+        from .queue_ui import BulkSettingsDialog
+        jobs = [self.store.get(identifier) for identifier in self.selected_job_ids()]
+        if not jobs or any(not job or job["status"] not in PENDING or job["removed"]
+                           or job["id"] in self.controller.worker_ids() for job in jobs):
+            self.show_notice("Select pending jobs without active workers to edit their settings.")
+            return
+        try:
+            BulkSettingsDialog(jobs, self.settings_panel.settings().to_dict(), self).exec()
+        except ValueError as exc:
+            self.show_notice(str(exc))
+
+    def compare_jobs(self):
+        from .queue_ui import ComparisonDialog
+        jobs = [self.store.get(identifier) for identifier in self.selected_job_ids()]
+        if not jobs:
+            self.show_notice("Select queue entries to compare their saved settings.")
+            return
+        try:
+            ComparisonDialog([(job["title"], job["settings"]) for job in jobs if job],
+                             self.settings_panel.settings().to_dict(), self).exec()
+        except ValueError as exc:
+            self.show_notice(str(exc))
+
+    def reorder_jobs(self, identifiers, before, stage):
+        try:
+            self.store.reorder(identifiers, before, stage=stage, exclude=self.controller.worker_ids())
+        except ValueError as exc:
+            self.show_notice(str(exc))
+        self.refresh_jobs()
+
+    def queue_schedules(self):
+        from .queue_ui import ScheduleDialog
+        ScheduleDialog(self.store, self).exec()
+
+    def queue_options(self):
+        from .queue_ui import QueueOptionsDialog
+        QueueOptionsDialog(self).exec()
+
+    def hide_to_tray(self):
+        if self.desktop.available:
+            self.hide()
+        else:
+            self.show_notice("A system tray is unavailable. Keep VideoDock open for background work.")
+
+    def show_timeline(self):
+        identifiers = self.selected_job_ids()
+        if identifiers:
+            self.timeline_dialog(identifiers[0])
+        else:
+            self.show_notice("Select a job to view its timeline.")
+
+    def timeline_dialog(self, identifier):
+        job = self.store.get(identifier)
+        if not job:
+            return
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Job timeline — " + job["title"])
+        dialog.resize(900, 580)
+        layout = QVBoxLayout(dialog)
+        text = QPlainTextEdit()
+        text.setReadOnly(True)
+        details = (f"Status: {job['status']} · Stage: {job['stage']} · Download attempts: {job['attempts']}\n"
+                   f"Download: {job['download_status']} · Captions: {job['caption_status']} · Translation: {job['translation_status']}\n"
+                   f"Source: {job['url']}\nFolder: {job['destination']}\nOutput: {job['output']}\n"
+                   f"Subtitles: {', '.join(job['caption_paths'])}\nLanguage: {job['caption_language_result']}\n"
+                   f"Processed: {duration_text(job['processed_duration'])}\n{job['caption_preview']}\n{job['error']}\n\n")
+        text.setPlainText(details + ("\n\n".join(f"{event['at']} · {event['stage']} · {event['kind']}\n{event['detail']}"
+                                              for event in self.store.timeline(identifier)) or "No recorded events for this older job."))
+        layout.addWidget(text)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        dialog.exec()
 
     def browse_destination(self):
         folder = QFileDialog.getExistingDirectory(self, "Choose destination", self.destination.text())
@@ -1225,20 +1530,24 @@ class MainWindow(QMainWindow):
 
     def refresh_jobs(self):
         self.refresh_models()
-        self.update_settings_summary()
+        self.update_settings_summary(refresh_indicators=False)
         jobs = self.store.jobs()
+        shared = self.shared_comparison_settings()
         for index, (stage, queue) in enumerate(self.stage_queues.items()):
             selected = {queue.item(item.row(), 0).data(Qt.ItemDataRole.UserRole)
                         for item in queue.selectionModel().selectedRows()}
             pending = [job for job in jobs if job["stage"] == stage
                        and job["status"] not in {"completed", "partial"} and not job["removed"]]
             queue.blockSignals(True)
+            queue.clearSelection()
             queue.setRowCount(len(pending))
             for row, job in enumerate(pending):
+                settings_text, settings_detail = self.queue_settings_indicator(job["settings"], shared)
                 values = [str(job["sequence"]), job["title"], job["settings"]["format"].upper(),
-                          (job[self.store.stage_status_field(stage)] or job["status"]).replace("_", " ").capitalize(), "",
+                          ("Pausing" if job["held"] and job["status"] == "cancelling" else
+                           job[self.store.stage_status_field(stage)] or job["status"]).replace("_", " ").capitalize(), "",
                           f"{job['speed'] / 1024**2:.1f} MB/s" if stage == "download" and job.get("speed") else "—",
-                          duration_text(job.get("eta")) if stage == "download" else "—"]
+                          duration_text(job.get("eta")) if stage == "download" else "—", settings_text]
                 for col, value in enumerate(values):
                     if col == 4:
                         bar = queue.cellWidget(row, col)
@@ -1251,13 +1560,15 @@ class MainWindow(QMainWindow):
                     item.setData(Qt.ItemDataRole.UserRole, job["id"])
                     if col == 3:
                         item.setForeground(status_color(job[self.store.stage_status_field(stage)] or job["status"]))
-                    item.setToolTip(job["error"] or (f"Processed {duration_text(job['processed_duration'])}\n{job['caption_preview']}"
+                    item.setToolTip((f"Retry {job['retry_count']} at {job['retry_at']}\n" if job["retry_at"] else "") + (job["error"] or (f"Processed {duration_text(job['processed_duration'])}\n{job['caption_preview']}"
                                                      if job["caption_preview"] else job["destination"]))
+                                    )
+                    if col == 7:
+                        item.setToolTip(settings_detail)
                     queue.setItem(row, col, item)
                 if job["id"] in selected:
-                    for col in range(queue.columnCount()):
-                        if queue.item(row, col):
-                            queue.item(row, col).setSelected(True)
+                    queue.selectionModel().select(queue.model().index(row, 0),
+                                                  QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows)
             queue.blockSignals(False)
             self.queue_tabs.setTabText(index, f"{('Downloading', 'Captioning', 'Translating')[index]} ({len(pending)})")
         history_selected = set(self.selected_history_ids())
@@ -1309,7 +1620,7 @@ class MainWindow(QMainWindow):
         self.history_selected()
         self.clear_cancelled_button.setEnabled(any(job["status"] == "cancelled" and job["id"] != self.controller.caption_id for job in jobs))
         active = len(self.controller.active) + bool(self.controller.caption_id)
-        queued = sum(job["status"] in CAPTION_PENDING | {"queued"} and not job["removed"] for job in jobs)
+        queued = sum(job["status"] in PENDING and not job["removed"] for job in jobs)
         complete = sum(job["status"] == "completed" for job in jobs)
         caption_job = self.store.get(self.controller.caption_id) if self.controller.caption_id else None
         self.required_model_button.setVisible(
@@ -1330,7 +1641,7 @@ class MainWindow(QMainWindow):
     def job_selected(self):
         jobs = [self.store.get(job_id) for job_id in self.selected_job_ids()]
         self.cancel_button.setEnabled(
-            any(job and job["status"] in ACTIVE | CAPTION_PENDING | {"queued"} for job in jobs)
+            any(job and job["status"] in ACTIVE | PENDING for job in jobs)
         )
         self.retry_button.setEnabled(
             any(job and job["status"] in {"partial", "failed", "cancelled"} for job in jobs)
@@ -1549,22 +1860,7 @@ class MainWindow(QMainWindow):
 
     def _job_details(self, job: dict | None):
         if job:
-            tracks = "\n".join(
-                f"{track['language']} · {track['role']} · {track['status']} · {track.get('provenance', '')}"
-                + ("\n" + track["error"] if track.get("error") else "")
-                for track in job.get("tracks", [])
-            )
-            QMessageBox.information(
-                self,
-                job["title"],
-                f"Status: {job['status']}\nAttempts: {job['attempts']}\n"
-                f"Source: {job['url']}\nFolder: {job['destination']}\n"
-                f"Output: {job['output'] or '—'}\nCaption status: {job['caption_status'] or '—'}\n"
-                f"Download status: {job['download_status'] or '—'}\nTranslation status: {job['translation_status'] or '—'}\n"
-                f"Subtitles: {', '.join(job['caption_paths']) or '—'}\n"
-                f"Actual source language: {job['caption_language_result'] or 'N/A'}\n{tracks}\n"
-                f"Processed: {duration_text(job['processed_duration'])}\n{job['caption_preview']}\n\n{job['error']}",
-            )
+            self.timeline_dialog(job["id"])
 
     def refresh_dependencies(self):
         self.dependencies.setPlainText(
@@ -1603,6 +1899,11 @@ class MainWindow(QMainWindow):
             self.update_info.setText(event["message"])
 
     def closeEvent(self, event):
+        if (hasattr(self, "desktop") and not self.desktop.exiting and not self.closing
+                and self.desktop.available and self.store.preference("close_to_tray", False)):
+            event.ignore()
+            self.hide()
+            return
         if self.controller.busy or self.background:
             event.ignore()
             self.closing = True
@@ -1614,6 +1915,9 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(100, self._close_when_idle)
         else:
             self.controller.pause()
+            if hasattr(self, "desktop"):
+                self.desktop.arm("none")
+                self.desktop.tray.hide()
             event.accept()
 
     def _close_when_idle(self):

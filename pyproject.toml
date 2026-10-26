@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "videodock"
-version = "0.4.4"
+version = "0.6.1"
 description = "A persistent desktop video and audio download queue"
 license = {file = "LICENSE"}
 requires-python = ">=3.11"

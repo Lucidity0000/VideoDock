@@ -12,6 +12,7 @@ a = Analysis(
     binaries=[(str(vendor / name), 'vendor') for name in
               ['VideoDockWorker.exe', 'yt-dlp.exe', 'ffmpeg.exe', 'ffprobe.exe', 'deno.exe']],
     datas=[(str(root / 'THIRD_PARTY_NOTICES.md'), '.'), (str(vendor / 'ffmpeg-LICENSE'), 'vendor'),
+           *((str(root / name), '.') for name in ('LICENSE', 'CREDITS.md', 'CITATION.cff', 'DISTRIBUTION.md')),
            (str(root / 'README.md'), '.'), (str(root / 'RELEASE_VALIDATION.md'), '.'),
            (str(root / 'requirements-inference.lock.txt'), '.'),
            (str(root / 'packaging' / 'inference-runtime.lock.json'), '.'),

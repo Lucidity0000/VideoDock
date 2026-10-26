@@ -63,6 +63,9 @@ def main() -> int:
 
             from .caption_models import catalog
             from .dependencies import dependency_report, resource_directory, worker_command
+            from .models import DownloadSettings
+            from .queue_ui import BulkSettingsDialog, ComparisonDialog, QueueOptionsDialog, ScheduleDialog
+            from .saved_lists_ui import SavedListEditor
 
             def capture():
                 folder = Path(arguments.smoke_test).resolve()
@@ -98,10 +101,86 @@ def main() -> int:
                         selections.append({"used": key, "speech": panel.local_model.currentData(),
                                            "translation": panel.translation_panel.model.currentData(),
                                            "device": panel.device.currentData()})
+                # Exercise the frozen list/controller implementation in the smoke database.
+                window.tabs.setCurrentIndex(0)
+                window.saved_lists_button.setChecked(True)
+                saved_id = store.create_saved_list("Smoke favorite · 最愛", "favorite",
+                                                   ["https://youtube.com/playlist?list=smoke"], [{
+                                                       "url": "https://youtu.be/smoke-original", "title": "Original entry"}])
+                window.refresh_saved_lists(saved_id)
+                window._preview_event({"type": "item", "item": {
+                    "url": "https://youtu.be/smoke-external", "title": "Added elsewhere · 新影片",
+                    "playlist": "", "index": 0, "duration": None}})
+                window.add_to_list_button.click()
+                assert len(store.saved_list(saved_id)["items"]) == 2
+                window.load_list_button.click()
+                assert len(window.items) == 2
+                editor = SavedListEditor(store, saved_id, window)
+                editor.changed.connect(window.refresh_saved_lists)
+                editor.show()
+                editor.entries.selectRow(0)
+                editor.remove_button.click()
+                editor.name.setText("Edited favorite · 自訂")
+                editor.rename()
+                application.processEvents()
+                editor.grab().save(str(folder / "saved-list-editor.png"))
+                editor.close()
+                window.load_list_button.click()
+                assert len(window.items) == 1 and window.items[0]["title"] == "Added elsewhere · 新影片"
+                if not window.auto_caption.isChecked():
+                    window.auto_caption.click()
+                if not window.auto_translation.isChecked():
+                    window.auto_translation.click()
+                assert not window.controller.running
+                # Exercise new frozen GUI/controller paths without starting workers or OS power actions.
+                store.enqueue(window.items, DownloadSettings(), str(folder / "queue-output"), allow_duplicates=True)
+                identifiers = [job["id"] for job in store.jobs()]
+                bulk = BulkSettingsDialog(store.jobs(), DownloadSettings().to_dict(), window)
+                bulk.panel.height.setCurrentIndex(bulk.panel.height.findData(480))
+                bulk.show()
+                application.processEvents()
+                bulk.grab().save(str(folder / "bulk-settings.png"))
+                bulk.apply_all_button.click()
+                assert all(job["settings"]["height"] == 480 for job in store.jobs())
+                assert window.preview.columnCount() == 5
+                assert window.queue.horizontalHeaderItem(7).text() == "Settings"
+                assert window.queue.item(0, 7).text() == "Custom"
+                window.controller.pause_jobs(identifiers)
+                assert all(store.get(key)["status"] == "paused" for key in identifiers)
+                window.controller.resume_jobs(identifiers)
+                assert not window.controller.running
+                comparison = ComparisonDialog([(job["title"], job["settings"]) for job in store.jobs()], DownloadSettings().to_dict(), window)
+                comparison.show()
+                application.processEvents()
+                comparison.grab().save(str(folder / "settings-comparison.png"))
+                comparison.close()
+                schedules = ScheduleDialog(store, window)
+                schedules.add()
+                schedules.show()
+                application.processEvents()
+                schedules.grab().save(str(folder / "queue-schedules.png"))
+                schedules.entries.setCurrentRow(0)
+                schedules.cancel_selected()
+                assert store.schedules()[-1]["state"] == "cancelled"
+                assert schedules.entries.count() == 0
+                schedules.close()
+                options = QueueOptionsDialog(window)
+                options.show()
+                application.processEvents()
+                options.grab().save(str(folder / "background-completion-options.png"))
+                options.close()
+                window.reorder_jobs(identifiers, None, "download")
+                assert all(store.timeline(key) for key in identifiers)
+                application.processEvents()
+                window.grab().save(str(folder / "saved-lists.png"))
                 (folder / "report.json").write_text(
                     json.dumps(
                         {
                             "dependencies": dependency_report(),
+                            "queue_controls": {"bulk_edit": True, "comparison": True, "job_pause_resume": True,
+                                               "schedules": True, "timeline": True, "power_executed": False,
+                                               "settings_in_queues": True, "apply_all_changed": True,
+                                               "cancelled_schedules_hidden": True},
                             "resources": str(resource_directory()),
                             "worker": worker_command(),
                             "tabs": window.tabs.count(),
@@ -115,6 +194,12 @@ def main() -> int:
                             "model_tabs": model_tabs,
                             "use_enabled": use_enabled,
                             "selections": selections,
+                            "saved_lists": {"name": store.saved_list(saved_id)["name"],
+                                            "remaining_entries": len(window.items), "added_from_other_link": True,
+                                            "original_links": store.saved_list(saved_id)["source_urls"]},
+                            "auto_start": {"caption": store.preference("auto_start_caption"),
+                                           "translation": store.preference("auto_start_translation"),
+                                           "queues_paused": not window.controller.running},
                             "resource_models": [spec["id"] for spec in catalog() if spec.get("format")],
                             "speech_selector": [window.settings_panel.local_model.itemData(index)
                                                 for index in range(window.settings_panel.local_model.count())],

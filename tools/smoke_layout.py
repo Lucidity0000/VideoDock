@@ -21,6 +21,8 @@ def main():
 
     from videodock.caption_ui import CaptionEditor
     from videodock.models import DownloadSettings
+    from videodock.queue_ui import BulkSettingsDialog, ComparisonDialog, QueueOptionsDialog, ScheduleDialog
+    from videodock.saved_lists_ui import SavedListEditor, SaveListDialog
     from videodock.store import Store
     from videodock.ui import MainWindow, OverrideDialog
 
@@ -48,6 +50,10 @@ def main():
             "detailed": True, "heights": [720, 1080], "captions": {"creator": ["en", "zh-Hant"]},
         }})
     window.preview.selectRow(0)
+    identifier = store.create_saved_list("Favorites · 自訂影片", "favorite", ["https://youtube.com/playlist?list=example"], window.items)
+    store.add_saved_items(identifier, [{"url": "https://youtu.be/external", "title": "Added from another link · 額外影片"}])
+    store.remove_saved_items(identifier, [store.saved_list(identifier)["items"][1]["id"]])
+    window.refresh_saved_lists(identifier)
     # No worker is started by adding these diagnostic rows.
     if not store.jobs():
         store.enqueue(window.items, settings, str(OUTPUT / "輸出影片"))
@@ -73,6 +79,11 @@ def main():
             window.tabs.setCurrentIndex(index)
             capture(window, f"{size}-page-{index}")
         window.tabs.setCurrentIndex(0)
+        window.saved_lists_button.setChecked(True)
+        app.processEvents()
+        app.processEvents()
+        capture(window, f"{size}-saved-lists")
+        window.saved_lists_button.setChecked(False)
         window.ranges_button.setChecked(True)
         app.processEvents()
         capture(window, f"{size}-playlist-ranges")
@@ -96,6 +107,31 @@ def main():
             for position in (0, 1):
                 scroll.verticalScrollBar().setValue(scroll.verticalScrollBar().maximum() * position)
                 capture(window, f"{size}-models-{index}-{position}")
+    lists_editor = SavedListEditor(store, identifier, window)
+    lists_editor.show()
+    capture(lists_editor, "saved-list-editor")
+    lists_editor.close()
+    save_dialog = SaveListDialog(True, "Favorites · 最愛", window)
+    save_dialog.show()
+    capture(save_dialog, "save-list-dialog")
+    save_dialog.close()
+    pending = [job for job in store.jobs() if job["stage"] == "download"]
+    bulk = BulkSettingsDialog(pending, settings.to_dict(), window)
+    bulk.show()
+    capture(bulk, "bulk-settings")
+    bulk.close()
+    comparison = ComparisonDialog([(job["title"], job["settings"]) for job in store.jobs()], DownloadSettings().to_dict(), window)
+    comparison.show()
+    capture(comparison, "settings-comparison")
+    comparison.close()
+    schedules = ScheduleDialog(store, window)
+    schedules.show()
+    capture(schedules, "queue-schedules")
+    schedules.close()
+    options = QueueOptionsDialog(window)
+    options.show()
+    capture(options, "background-completion-options")
+    options.close()
     override = OverrideDialog(replace(settings, translate=False), window.items[0], window)
     override.show()
     for index in range(override.panel.pages.count()):

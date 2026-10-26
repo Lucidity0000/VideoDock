@@ -4,12 +4,14 @@ import json
 import os
 import signal
 import subprocess
+from datetime import UTC, datetime, timedelta
 
 from PySide6.QtCore import QObject, QProcess, QProcessEnvironment, QTimer, Signal
 
 from .caption_models import is_ready, model_spec, remove_model, storage_folder
 from .dependencies import resource_directory, subprocess_flags, worker_command
-from .models import ACTIVE, CAPTION_PENDING, DownloadSettings
+from .models import ACTIVE, CAPTION_PENDING, PENDING, DownloadSettings
+from .queue_policy import transient_failure
 from .store import Store
 from .windows_job import WindowsJob
 
@@ -132,6 +134,9 @@ class QueueController(QObject):
     message = Signal(str)
     idle = Signal()
     models_changed = Signal()
+    notification = Signal(str, str, str)
+    completed_run = Signal()
+    run_finished = Signal(bool)
 
     def __init__(self, store: Store, parent=None):
         super().__init__(parent)
@@ -144,38 +149,72 @@ class QueueController(QObject):
         self.removing: set[str] = set()
         self.running = False
         self.paused_stages = {"download", "caption", "translation"}
+        self.auto_suppressed: set[str] = set()
+        self.started_stages: set[str] = set()
         self.shutting_down = False
         self.maintenance = False
         self.limit = int(store.preference("concurrency", 2))
+        self.run_jobs = set()
+        self.notified = set()
+        # A closed app never silently replays an overdue start at next launch.
+        for item in store.schedules():
+            if item["state"] == "pending" and datetime.fromisoformat(item["due"]) <= datetime.now(UTC):
+                store.schedule_state(item["id"], "missed")
         self.timer = QTimer(self)
         self.timer.setInterval(400)
-        self.timer.timeout.connect(self.pump)
+        self.timer.timeout.connect(self.tick)
         self.timer.start()
 
-    def start(self, stage=None):
-        if self.maintenance:
+    def start(self, stage=None, *, dispatch=True):
+        if stage is not None and stage not in {"download", "caption", "translation"}:
+            raise ValueError("Unknown queue stage")
+        if self.maintenance or self.shutting_down:
             return
         self.running = True
+        self.started_stages.update({"download", "caption", "translation"} if stage is None else {stage})
         if stage is None:
             self.paused_stages.clear()
+            self.auto_suppressed.clear()
         else:
             self.paused_stages.discard(stage)
-        self.pump()
+            self.auto_suppressed.discard(stage)
+        if dispatch:
+            self.pump()
         self.changed.emit()
 
     def pause(self, stage=None):
         if stage is None:
             self.paused_stages = {"download", "caption", "translation"}
+            self.auto_suppressed.update(self.paused_stages)
         else:
             self.paused_stages.add(stage)
+            self.auto_suppressed.add(stage)
         self.running = len(self.paused_stages) < 3
         self.changed.emit()
 
     def stage_running(self, stage):
         return self.running and stage not in self.paused_stages
 
+    def set_auto_start(self, stage: str, enabled: bool):
+        if stage not in {"caption", "translation"}:
+            raise ValueError("Only captioning and translation support automatic handoffs.")
+        self.store.set_preference(f"auto_start_{stage}", bool(enabled))
+        if enabled:
+            self.auto_suppressed.discard(stage)
+        self.changed.emit()
+
+    def _auto_start(self, stage: str, upstream: str):
+        # A handoff only arms the next queue. Its previous worker must finish
+        # cleanup before pump() can claim the shared job/inference slot.
+        if (not self.shutting_down and not self.maintenance and upstream in self.started_stages
+                and stage not in self.auto_suppressed
+                and self.store.preference(f"auto_start_{stage}", False)):
+            self.paused_stages.discard(stage)
+            self.started_stages.add(stage)
+            self.running = True
+
     def pump(self):
-        if not self.running or self.shutting_down or self.maintenance:
+        if self.store.closed or not self.running or self.shutting_down or self.maintenance:
             return
         while self.stage_running("download") and len(self.active) < self.limit:
             job = self.store.next_queued()
@@ -187,11 +226,115 @@ class QueueController(QObject):
             )
             worker = WorkerProcess({"action": "download", "job": {**job, "split_stages": True}}, self)
             self.active[job["id"]] = worker
+            self.run_jobs.add(job["id"])
+            self.notified.discard(job["id"])
             worker.event.connect(lambda event, job_id=job["id"]: self._event(job_id, event))
             worker.ended.connect(lambda code, job_id=job["id"]: self._ended(job_id, code))
             worker.start()
             self.changed.emit()
         self._pump_captions()
+        self._check_completion()
+
+    def tick(self, instant=None):
+        if self.store.closed:
+            self.timer.stop()
+            return
+        instant = instant or datetime.now(UTC)
+        if self.shutting_down or self.maintenance:
+            return
+        for item in self.store.schedules():
+            if item["state"] == "pending" and datetime.fromisoformat(item["due"]) <= instant:
+                if self.store.schedule_state(item["id"], "executed"):
+                    if item["action"] == "pause":
+                        self.pause(item["stage"])
+                    else:
+                        self.start(item["stage"], dispatch=False)
+                    self.message.emit(f"Scheduled {item['action']}: {item['stage']} queue")
+        for job in self.store.jobs():
+            if (job["status"] == "retry_wait" and not job["held"] and not job["removed"]
+                    and self.stage_running(job["stage"]) and datetime.fromisoformat(job["retry_at"]) <= instant
+                    and job["id"] not in self.active and job["id"] != self.caption_id):
+                self.store.update(job["id"], status=self.store.queued_status(job["stage"]), retry_at="",
+                                  **{self.store.stage_status_field(job["stage"]): "queued"})
+                self.changed.emit()
+        self.pump()
+        self._check_completion()
+
+    def _settled(self, identifier):
+        job = self.store.get(identifier)
+        if not job or job["removed"] or self.shutting_down:
+            return
+        if job["held"] and job["status"] in PENDING | {"cancelled"}:
+            self.store.update(identifier, status="paused", **{self.store.stage_status_field(job["stage"]): "paused"})
+            return
+        if job["status"] == "failed":
+            settings = DownloadSettings.from_dict(job["settings"])
+            category = transient_failure(job["error"])
+            if category and category in settings.retry_categories and job["retry_count"] < settings.retry_limit:
+                count = job["retry_count"] + 1
+                delay = min(3600, settings.retry_delay * 2 ** (count - 1))
+                due = datetime.now(UTC) + timedelta(seconds=delay)
+                self.store.update(identifier, status="retry_wait", retry_count=count, retry_at=due.isoformat(),
+                                  **{self.store.stage_status_field(job["stage"]): "retry_wait"})
+                self.store.add_event(identifier, "retry", f"Automatic {category} retry {count}/{settings.retry_limit} at {due.isoformat()}")
+                return
+        if job["status"] in {"completed", "partial", "failed"} and identifier not in self.notified:
+            self.notified.add(identifier)
+            self.notification.emit("completion" if job["status"] == "completed" else "failure",
+                                   job["title"], job["error"] or "Job completed")
+
+    def _check_completion(self):
+        if (not self.run_jobs or self.active or self.caption_id or self.model_workers
+                or self.shutting_down or self.maintenance):
+            return
+        jobs = self.store.jobs()
+        if any(not job["removed"] and job["status"] in ACTIVE | PENDING for job in jobs):
+            return
+        outcomes = [job for job in jobs if job["id"] in self.run_jobs]
+        success = len(outcomes) == len(self.run_jobs) and all(job["status"] == "completed" and not job["removed"]
+                                                           for job in outcomes)
+        self.run_jobs.clear()
+        self.notification.emit("completion" if success else "failure", "Queue finished",
+                               "All jobs completed." if success else "Queue finished with failed or cancelled jobs.")
+        ready = success and not any(item["state"] == "pending" for item in self.store.schedules())
+        self.run_finished.emit(ready)
+        if ready:
+            self.completed_run.emit()
+
+    def worker_ids(self):
+        return set(self.active) | ({self.caption_id} if self.caption_id else set())
+
+    def edit_pending(self, identifiers, patch):
+        count = self.store.bulk_settings(identifiers, patch, exclude=self.worker_ids())
+        self.changed.emit()
+        return count
+
+    def pause_jobs(self, identifiers):
+        for identifier in identifiers:
+            job = self.store.get(identifier)
+            if not job or job["removed"]:
+                continue
+            if job["status"] in PENDING:
+                self.store.update(identifier, held=1, status="paused",
+                                  **{self.store.stage_status_field(job["stage"]): "paused"})
+            elif job["status"] in {"inspecting", "downloading", "preparing", "transcribing", "translating"}:
+                self.store.update(identifier, held=1)
+                self.cancel([identifier], for_pause=True)
+            else:
+                self.message.emit("This stage cannot pause safely. Wait for processing/export to finish.")
+                continue
+            self.store.add_event(identifier, "pause", "Individual pause; partial files and completed segments retained")
+        self.changed.emit()
+
+    def resume_jobs(self, identifiers):
+        for identifier in identifiers:
+            job = self.store.get(identifier)
+            if job and job["held"] and job["status"] == "paused" and identifier not in self.worker_ids():
+                self.store.update(identifier, held=0, status=self.store.queued_status(job["stage"]), retry_at="",
+                                  **{self.store.stage_status_field(job["stage"]): "queued"})
+                self.store.add_event(identifier, "resume", "Individual hold released; queue start/pause still applies")
+        self.changed.emit()
+        self.pump()
 
     @property
     def busy(self):
@@ -202,7 +345,7 @@ class QueueController(QObject):
             return
         root = storage_folder(self.store)
         for job in self.store.jobs():
-            if job["removed"] or job["id"] in self.active or job["status"] not in CAPTION_PENDING:
+            if job["removed"] or job["held"] or job["id"] in self.active or job["status"] not in CAPTION_PENDING:
                 continue
             stage = job["stage"]
             if not self.stage_running(stage):
@@ -213,6 +356,7 @@ class QueueController(QObject):
                 settings.translation_revision
                 if model_id == settings.translation_model
                 else settings.alignment_revision if model_id == settings.alignment_model
+                else settings.fallback_revision if model_id == settings.fallback_model
                 else settings.model_revision
             )
             spec = model_spec(model_id, revision)
@@ -231,6 +375,8 @@ class QueueController(QObject):
                     self.changed.emit()
                 continue
             self.caption_id = job["id"]
+            self.run_jobs.add(job["id"])
+            self.notified.discard(job["id"])
             self.store.update(job["id"], status="preparing", **{self.store.stage_status_field(stage): "preparing"}, progress=0, error="")
             request = {"action": "caption_service", "job": {**job, "defer_translation": stage == "caption" and settings.translate}, "model_folder": str(root)}
             if self.caption_worker:
@@ -250,6 +396,7 @@ class QueueController(QObject):
             if self.caption_worker:
                 self.caption_worker.cancel_timer.stop()
             self.caption_id = None
+            self._settled(job_id)
             if job_id in self.removing:
                 self.store.remove(job_id)
                 self.removing.discard(job_id)
@@ -301,7 +448,7 @@ class QueueController(QObject):
         if not self.caption_id:
             return False
         settings = DownloadSettings.from_dict(self.store.get(self.caption_id)["settings"])
-        return (settings.uses_local and settings.caption_model == model_id) or (
+        return (settings.uses_local and model_id in {settings.caption_model, settings.fallback_model}) or (
             settings.translate and settings.translation_model == model_id
         ) or (settings.alignment_model == model_id)
 
@@ -408,23 +555,29 @@ class QueueController(QObject):
         elif kind == "media_ready":
             self.store.update(
                 job_id,
-                status="cancelled" if cancelling else "caption_queued",
+                status="paused" if job["held"] else "cancelled" if cancelling else "caption_queued",
                 stage="caption",
                 download_status="complete",
-                caption_status="cancelled" if cancelling else "queued",
+                caption_status="paused" if job["held"] else "cancelled" if cancelling else "queued",
+                retry_count=0, retry_at="",
                 media_path=event["output"],
                 output=event["output"],
                 progress=0,
             )
+            if not cancelling and not job["removed"]:
+                self._auto_start("caption", "download")
         elif kind == "translation_ready":
-            self.store.update(job_id, stage="translation", status="cancelled" if cancelling else "translation_queued", caption_status="complete",
-                              translation_status="cancelled" if cancelling else "queued", progress=0, error="", cues_path=event["cues_path"],
+            self.store.update(job_id, stage="translation", status="paused" if job["held"] else "cancelled" if cancelling else "translation_queued", caption_status="complete",
+                              translation_status="paused" if job["held"] else "cancelled" if cancelling else "queued", progress=0, error="", cues_path=event["cues_path"],
+                              retry_count=0, retry_at="",
                               caption_language_result=event["caption_language_result"])
+            if not cancelling and not job["removed"]:
+                self._auto_start("translation", "caption")
         elif kind == "caption_waiting":
             self.store.update(
                 job_id,
-                status="cancelled" if cancelling else "waiting_model",
-                **{stage_field: "cancelled" if cancelling else "waiting_model"},
+                status="paused" if job["held"] else "cancelled" if cancelling else "waiting_model",
+                **{stage_field: "paused" if job["held"] else "cancelled" if cancelling else "waiting_model"},
                 error="" if cancelling else event["message"],
                 waiting_model_id="" if cancelling else event.get("model_id", ""),
             )
@@ -453,9 +606,9 @@ class QueueController(QObject):
             )
         elif kind in {"error", "cancelled"}:
             status = (
-                self.store.queued_status(stage)
+                "paused" if job["held"] else self.store.queued_status(stage)
                 if self.shutting_down
-                else ("cancelled" if cancelling or kind == "cancelled" else "failed")
+                else ("paused" if job["held"] else "cancelled" if cancelling or kind == "cancelled" else "failed")
             )
             self.store.update(
                 job_id,
@@ -464,11 +617,14 @@ class QueueController(QObject):
                 speed=None,
                 eta=None,
                 **{stage_field: (
-                    "queued" if self.shutting_down else "cancelled" if status == "cancelled" else "failed"
+                    "queued" if self.shutting_down and status != "paused" else status
                 )},
             )
         elif kind == "warning":
+            self.store.add_event(job_id, "warning", event["message"])
             self.message.emit(event["message"])
+        elif kind in {"segment_checkpoint", "segment_fallback", "checkpoint_resume"}:
+            self.store.add_event(job_id, kind, event.get("message", ""))
         elif kind == "model_runtime":
             detail = f"{event['model_id']}: {event['backend']} · {event['device'].upper()}"
             if event.get("cpu_offload"):
@@ -485,9 +641,9 @@ class QueueController(QObject):
         job = self.store.get(job_id)
         if job and job["status"] in ACTIVE:
             status = (
-                self.store.queued_status(job["stage"])
+                "paused" if job["held"] else self.store.queued_status(job["stage"])
                 if self.shutting_down
-                else ("cancelled" if job["status"] == "cancelling" else "failed")
+                else ("paused" if job["held"] else "cancelled" if job["status"] == "cancelling" else "failed")
             )
             error = worker.errors if worker else ""
             self.store.update(
@@ -496,24 +652,27 @@ class QueueController(QObject):
                 error=error or f"Worker stopped (code {code}). Retry to resume.",
                 speed=None,
                 eta=None,
-                **{self.store.stage_status_field(job["stage"]): "queued" if self.shutting_down else status},
+                **{self.store.stage_status_field(job["stage"]): "queued" if self.shutting_down and status != "paused" else status},
             )
         if worker:
             worker.deleteLater()
         if job_id in self.removing:
             self.store.remove(job_id)
             self.removing.discard(job_id)
+        self._settled(job_id)
         self.changed.emit()
         if not self.active:
             self.idle.emit()
         self.pump()
 
-    def cancel(self, job_ids: list[str]):
+    def cancel(self, job_ids: list[str], for_pause=False):
         for job_id in job_ids:
             job = self.store.get(job_id)
-            if not job or job["status"] not in ACTIVE | CAPTION_PENDING | {"queued"}:
+            if not job or job["status"] not in ACTIVE | PENDING:
                 continue
-            if job["status"] in CAPTION_PENDING | {"queued"}:
+            if not for_pause:
+                self.store.update(job_id, held=0, retry_at="")
+            if job["status"] in PENDING:
                 # The previous stage may still own a worker while cleaning up.
                 # Cancel the pending stage without interrupting completed work.
                 self.store.update(job_id, status="cancelled", **{self.store.stage_status_field(job["stage"]): "cancelled"})
